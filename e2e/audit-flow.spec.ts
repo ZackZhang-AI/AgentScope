@@ -26,6 +26,14 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   await expect(page.getByText(/Event 1\/\d+: run.created/)).toBeVisible();
   await page.getByRole("button", { name: "Play visual replay" }).click();
   await expect(page.getByText("Diagnostics", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("treeitem").filter({ hasText: "provider-inspection" }).click();
+  await page.getByRole("button", { name: "Fork from this step" }).click();
+  await expect(page.getByRole("dialog", { name: "Replay preflight" })).toBeVisible();
+  await expect(page.getByText("Ready to create a child run")).toBeVisible();
+  await page.getByRole("button", { name: "Create child run" }).click();
+  await expect(
+    page.getByRole("treeitem").filter({ hasText: "checkpoint-restore" }),
+  ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Risk Score", { exact: true })).toBeVisible();
   const markdownDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Markdown" }).click();

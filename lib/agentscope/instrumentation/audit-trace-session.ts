@@ -25,6 +25,10 @@ type AuditTraceSessionInput = {
   parsedInput: ParsedAuditInput;
   promptVersion: string;
   startedAt: Date;
+  branch?: {
+    parentRunId: string;
+    forkedFromSpanId: string;
+  };
 };
 
 function toTraceError(error: unknown): TraceError {
@@ -66,6 +70,7 @@ export class AuditTraceSession {
     parsedInput,
     promptVersion,
     startedAt,
+    branch,
   }: AuditTraceSessionInput) {
     this.#request = request;
     this.#input = parsedInput;
@@ -95,6 +100,8 @@ export class AuditTraceSession {
       status: "queued",
       taskType: "code_audit",
       taskInputHash: parsedInput.contentHash,
+      parentRunId: branch?.parentRunId,
+      forkedFromSpanId: branch?.forkedFromSpanId,
       configSnapshot: {
         provider: request.provider,
         promptVersion,
@@ -194,8 +201,36 @@ export class AuditTraceSession {
     ];
   }
 
-  startInspection(): TraceEvent {
-    return this.#recorder.startSpan({
+  recordCheckpointRestore(parentSpanId: string): TraceEvent[] {
+    return [
+      this.#recorder.startSpan({
+        id: this.#spanId("restore"),
+        parentSpanId: this.#spanId("agent"),
+        kind: "custom",
+        name: "checkpoint-restore",
+        inputRef: {
+          kind: "inline",
+          data: { parentSpanId },
+          redacted: false,
+        },
+        attributes: { "replay.parent_span_id": parentSpanId },
+      }),
+      this.#recorder.endSpan(this.#spanId("restore"), {
+        status: "success",
+        outputRef: {
+          kind: "inline",
+          data: {
+            restoredInputHash: this.#input.contentHash,
+            promptVersion: this.#promptVersion,
+          },
+          redacted: false,
+        },
+      }),
+    ];
+  }
+
+  startInspection(): TraceEvent[] {
+    const started = this.#recorder.startSpan({
       id: this.#spanId("inspect"),
       parentSpanId: this.#spanId("agent"),
       kind: "model",
@@ -210,6 +245,25 @@ export class AuditTraceSession {
         "prompt.version": this.#promptVersion,
       },
     });
+    const createdAt = new Date().toISOString();
+    const checkpoint = this.#recorder.addCheckpoint({
+      id: this.#checkpointId("inspect"),
+      runId: this.runId,
+      spanId: this.#spanId("inspect"),
+      stateRef: `audit-input://${this.#input.contentHash}`,
+      configSnapshot: {
+        provider: this.#request.provider,
+        intensity: this.#request.intensity,
+        rules: this.#request.rules,
+        promptVersion: this.#promptVersion,
+      },
+      toolPolicySnapshot: {},
+      completeness: "complete",
+      blockedReasons: [],
+      createdAt,
+      schemaVersion,
+    });
+    return [started, checkpoint];
   }
 
   completeInspection(
@@ -231,6 +285,11 @@ export class AuditTraceSession {
         durationMs,
         tokenUsage: result.tokenUsage,
       },
+      replayability: {
+        level: "high",
+        reason: "The model step has a complete input and configuration checkpoint.",
+        checkpointId: this.#checkpointId("inspect"),
+      },
     });
   }
 
@@ -241,6 +300,11 @@ export class AuditTraceSession {
         status: "error",
         error: traceError,
         metrics: { durationMs },
+        replayability: {
+          level: "high",
+          reason: "The failed model step can be retried from its complete checkpoint.",
+          checkpointId: this.#checkpointId("inspect"),
+        },
       }),
       this.#recorder.endSpan(this.#spanId("agent"), {
         status: "error",
@@ -354,5 +418,9 @@ export class AuditTraceSession {
 
   #spanId(stage: string) {
     return `${this.runId}:${stage}`;
+  }
+
+  #checkpointId(stage: string) {
+    return `${this.runId}:checkpoint:${stage}`;
   }
 }

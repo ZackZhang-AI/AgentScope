@@ -43,6 +43,7 @@ export function AuditWorkbench() {
   const [sessions, setSessions] = useState<AuditResponse[]>([]);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isForking, setIsForking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -108,6 +109,76 @@ export function AuditWorkbench() {
       setError(message);
     } finally {
       setIsRunning(false);
+    }
+  }
+
+  async function forkFromSpan(spanId: string) {
+    if (!result) return false;
+
+    setIsForking(true);
+    setError(null);
+    const parent = result;
+
+    try {
+      const response = await fetch(`/api/v1/runs/${encodeURIComponent(parent.id)}/fork`, {
+        method: "POST",
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          targetSpanId: spanId,
+          parentProjection: parent.trace,
+          request: {
+            content,
+            inputType,
+            provider,
+            intensity,
+            rules,
+            source,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error ?? "Fork request failed.");
+      }
+
+      setTraceEvents([]);
+      let childResult: AuditResponse | null = null;
+      let streamError: string | null = null;
+
+      await consumeAuditStream(response, (message) => {
+        if (message.type === "trace_event") {
+          setTraceEvents((current) => {
+            if (current.some((event) => event.eventId === message.event.eventId)) {
+              return current;
+            }
+            return [...current, message.event].sort((left, right) => left.sequence - right.sequence);
+          });
+        }
+
+        if (message.type === "result") {
+          childResult = message.result;
+          setResult(message.result);
+          saveSession(message.result);
+          setSessions(loadSessions());
+        }
+
+        if (message.type === "error") streamError = message.error;
+      });
+
+      if (streamError) throw new Error(streamError);
+      if (!childResult) throw new Error("Fork stream completed without a child run.");
+      return true;
+    } catch (forkError) {
+      setError(
+        forkError instanceof Error ? forkError.message : "Fork request failed.",
+      );
+      return false;
+    } finally {
+      setIsForking(false);
     }
   }
 
@@ -208,9 +279,13 @@ export function AuditWorkbench() {
             </div>
           ) : null}
           <TraceExplorer
+            key={result?.id ?? "active-run"}
             events={traceEvents}
             projection={result?.trace ?? null}
             isRunning={isRunning}
+            provider={provider}
+            isForking={isForking}
+            onForkSpan={forkFromSpan}
           />
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
             <ReportPreview markdown={result?.reportMarkdown} />

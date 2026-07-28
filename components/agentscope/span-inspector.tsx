@@ -13,6 +13,8 @@ type SpanInspectorProps = {
   span?: Span;
   artifacts: Artifact[];
   checkpoints: ReplayCheckpoint[];
+  isForking: boolean;
+  onRequestFork: (spanId: string) => void;
 };
 
 const tabs: { id: InspectorTab; label: string }[] = [
@@ -57,7 +59,13 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-export function SpanInspector({ span, artifacts, checkpoints }: SpanInspectorProps) {
+export function SpanInspector({
+  span,
+  artifacts,
+  checkpoints,
+  isForking,
+  onRequestFork,
+}: SpanInspectorProps) {
   const [tab, setTab] = useState<InspectorTab>("overview");
 
   if (!span) {
@@ -145,6 +153,15 @@ export function SpanInspector({ span, artifacts, checkpoints }: SpanInspectorPro
             }`}>
               {replay?.level ?? (spanCheckpoint ? "medium" : "blocked")}
             </span>
+            <button
+              type="button"
+              onClick={() => onRequestFork(span.id)}
+              disabled={isForking}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              Fork from this step
+            </button>
           </div>
         </div>
       ) : null}

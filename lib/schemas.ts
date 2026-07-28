@@ -33,6 +33,12 @@ export const auditRequestSchema = z.object({
     .optional(),
 });
 
+export const replayForkRequestSchema = z.object({
+  targetSpanId: z.string().min(1),
+  request: auditRequestSchema,
+  parentProjection: runProjectionSchema.optional(),
+});
+
 export const agentEventSchema = z.object({
   id: z.enum(["intake", "plan", "inspect", "finding", "evaluate", "report"]),
   stage: z.enum(["intake", "plan", "inspect", "finding", "evaluate", "report"]),

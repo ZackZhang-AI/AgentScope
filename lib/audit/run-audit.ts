@@ -14,6 +14,13 @@ import { createAgentEvent } from "./events";
 
 export const PROMPT_VERSION = "audit-v2";
 
+export type AuditRunOptions = {
+  fork?: {
+    parentRunId: string;
+    forkedFromSpanId: string;
+  };
+};
+
 function upsertEvent(events: Map<AgentStage, AgentEvent>, event: AgentEvent) {
   events.set(event.stage, event);
   return event;
@@ -21,6 +28,7 @@ function upsertEvent(events: Map<AgentStage, AgentEvent>, event: AgentEvent) {
 
 export async function* runAuditStream(
   request: AuditRequest,
+  options: AuditRunOptions = {},
 ): AsyncGenerator<AuditStreamMessage> {
   const startedAt = new Date();
   const input = parseAuditInput(request);
@@ -31,45 +39,68 @@ export async function* runAuditStream(
     parsedInput: input,
     promptVersion: PROMPT_VERSION,
     startedAt,
+    branch: options.fork,
   });
 
   for (const event of traceSession.start()) {
     yield { type: "trace_event", event };
   }
-  for (const event of traceSession.recordIntake()) {
-    yield { type: "trace_event", event };
-  }
-  yield {
-    type: "trace",
-    event: upsertEvent(
-      events,
-      createAgentEvent(
-        "intake",
-        "complete",
-        `Parsed ${input.estimatedLines} lines from ${files}.`,
-        { artifact: `contentHash=${input.contentHash}` },
+  if (options.fork) {
+    for (const event of traceSession.recordCheckpointRestore(
+      options.fork.forkedFromSpanId,
+    )) {
+      yield { type: "trace_event", event };
+    }
+    yield {
+      type: "trace",
+      event: upsertEvent(
+        events,
+        createAgentEvent(
+          "intake",
+          "complete",
+          `Restored checkpoint from ${options.fork.forkedFromSpanId}.`,
+          { artifact: `contentHash=${input.contentHash}` },
+        ),
       ),
-    ),
-  };
+    };
+  } else {
+    for (const event of traceSession.recordIntake()) {
+      yield { type: "trace_event", event };
+    }
+    yield {
+      type: "trace",
+      event: upsertEvent(
+        events,
+        createAgentEvent(
+          "intake",
+          "complete",
+          `Parsed ${input.estimatedLines} lines from ${files}.`,
+          { artifact: `contentHash=${input.contentHash}` },
+        ),
+      ),
+    };
 
-  for (const event of traceSession.recordPlan()) {
-    yield { type: "trace_event", event };
-  }
-  yield {
-    type: "trace",
-    event: upsertEvent(
-      events,
-      createAgentEvent(
-        "plan",
-        "complete",
-        `Planned a ${request.intensity} audit for: ${request.rules.join(", ")}.`,
-        { artifact: `promptVersion=${PROMPT_VERSION}` },
+    for (const event of traceSession.recordPlan()) {
+      yield { type: "trace_event", event };
+    }
+    yield {
+      type: "trace",
+      event: upsertEvent(
+        events,
+        createAgentEvent(
+          "plan",
+          "complete",
+          `Planned a ${request.intensity} audit for: ${request.rules.join(", ")}.`,
+          { artifact: `promptVersion=${PROMPT_VERSION}` },
+        ),
       ),
-    ),
-  };
+    };
+  }
 
   const inspectionStarted = Date.now();
-  yield { type: "trace_event", event: traceSession.startInspection() };
+  for (const event of traceSession.startInspection()) {
+    yield { type: "trace_event", event };
+  }
   yield {
     type: "trace",
     event: upsertEvent(

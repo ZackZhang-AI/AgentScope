@@ -23,6 +23,8 @@ import {
 } from "../lib/agentscope/infrastructure/postgres/postgres-trace-repository";
 import { closeDatabasePool } from "../lib/agentscope/infrastructure/postgres/database";
 import { POST as runAudit } from "../app/api/audit/route";
+import { POST as forkRun } from "../app/api/v1/runs/[runId]/fork/route";
+import type { AuditStreamMessage } from "../lib/types";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -127,5 +129,58 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     expect(stored?.run.id).toBe(result.id);
     expect(stored?.run.status).toBe(result.trace.run.status);
     expect(stored?.spans.length).toBe(result.trace.spans.length);
+  });
+
+  it("persists a fork as a separate child without mutating its parent", async () => {
+    vi.stubEnv("DATABASE_URL", databaseUrl);
+    const requestBody = {
+      content: "const value = userInput;",
+      inputType: "files",
+      provider: "mock",
+      intensity: "quick",
+      rules: ["security"],
+    };
+    const parentResponse = await runAudit(
+      new Request("http://localhost/api/audit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody),
+      }),
+    );
+    const parent = await parentResponse.json();
+    const parentBefore = await repository.getProjection(parent.id);
+    const target = parent.trace.spans.find(
+      (span: { name: string }) => span.name === "provider-inspection",
+    );
+
+    const response = await forkRun(
+      new Request(`http://localhost/api/v1/runs/${parent.id}/fork`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          targetSpanId: target.id,
+          request: requestBody,
+        }),
+      }),
+      { params: Promise.resolve({ runId: parent.id }) },
+    );
+    const messages = (await response.text())
+      .split("\n")
+      .filter((line) => line.startsWith("data: "))
+      .map((line) => JSON.parse(line.slice(6)) as AuditStreamMessage);
+    const result = messages.find(
+      (message): message is Extract<AuditStreamMessage, { type: "result" }> =>
+        message.type === "result",
+    )?.result;
+    const child = result ? await repository.getProjection(result.id) : null;
+    const parentAfter = await repository.getProjection(parent.id);
+
+    expect(response.status).toBe(200);
+    expect(child?.run).toMatchObject({
+      parentRunId: parent.id,
+      forkedFromSpanId: target.id,
+    });
+    expect(child?.spans.some((span) => span.name === "checkpoint-restore")).toBe(true);
+    expect(parentAfter).toEqual(parentBefore);
   });
 });

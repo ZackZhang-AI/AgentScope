@@ -31,11 +31,16 @@ import {
 import { SpanInspector } from "./span-inspector";
 import { DiagnosticsPanel } from "./diagnostics-panel";
 import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
+import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
+import { ReplayPreflightDialog } from "./replay-preflight-dialog";
 
 type TraceExplorerProps = {
   events: TraceEvent[];
   projection: RunProjection | null;
   isRunning: boolean;
+  provider: string;
+  isForking: boolean;
+  onForkSpan: (spanId: string) => Promise<boolean>;
 };
 
 const kindIcon = {
@@ -65,11 +70,19 @@ function safeProject(events: TraceEvent[]) {
   }
 }
 
-export function TraceExplorer({ events, projection, isRunning }: TraceExplorerProps) {
+export function TraceExplorer({
+  events,
+  projection,
+  isRunning,
+  provider,
+  isForking,
+  onForkSpan,
+}: TraceExplorerProps) {
   const [cursor, setCursor] = useState<number | null>(null);
   const [selectedSpanId, setSelectedSpanId] = useState<string>();
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [forkTargetId, setForkTargetId] = useState<string>();
 
   const displayCursor = cursor ?? events.length;
 
@@ -101,8 +114,15 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
     () => getTraceBounds(visibleProjection?.spans ?? []),
     [visibleProjection?.spans],
   );
+  const preferredSpan = visibleProjection?.spans.find(
+    (span) => span.status === "error" && span.replayability?.level === "high",
+  ) ?? visibleProjection?.spans.find(
+    (span) => span.status === "error",
+  ) ?? visibleProjection?.spans.find(
+    (span) => span.replayability?.level === "high",
+  ) ?? visibleProjection?.spans[0];
   const selectedSpan = visibleProjection?.spans.find((span) => span.id === selectedSpanId)
-    ?? visibleProjection?.spans[0];
+    ?? preferredSpan;
   const diagnostics = useMemo(
     () => visibleProjection ? diagnoseRun(visibleProjection) : [],
     [visibleProjection],
@@ -111,6 +131,10 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
   const currentEvent = displayCursor > 0 ? events[displayCursor - 1] : undefined;
   const run = visibleProjection?.run ?? projection?.run;
   const canReplay = events.length > 1;
+  const forkTarget = projection?.spans.find((span) => span.id === forkTargetId);
+  const replayPreflight = forkTarget && projection
+    ? buildReplayPreflight(projection, forkTarget.id)
+    : undefined;
 
   return (
     <section className="overflow-hidden rounded-lg border border-zinc-300 bg-white" aria-labelledby="trace-explorer-title">
@@ -126,6 +150,14 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
                   {run.status}
                 </span>
                 <span className="truncate font-mono text-[10px] text-zinc-500">{run.id}</span>
+                {run.parentRunId ? (
+                  <span
+                    className="max-w-48 truncate rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-[10px] text-emerald-800"
+                    title={`Forked from ${run.parentRunId}`}
+                  >
+                    child of {run.parentRunId}
+                  </span>
+                ) : null}
               </>
             ) : null}
           </div>
@@ -269,11 +301,27 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
               span={selectedSpan}
               artifacts={visibleProjection?.artifacts ?? []}
               checkpoints={visibleProjection?.checkpoints ?? []}
+              isForking={isForking}
+              onRequestFork={setForkTargetId}
             />
           </div>
           <DiagnosticsPanel diagnostics={diagnostics} onSelectSpan={setSelectedSpanId} />
         </>
       )}
+      {forkTarget && replayPreflight ? (
+        <ReplayPreflightDialog
+          target={forkTarget}
+          preflight={replayPreflight}
+          provider={provider}
+          isSubmitting={isForking}
+          onClose={() => setForkTargetId(undefined)}
+          onConfirm={() => {
+            void onForkSpan(forkTarget.id).then((created) => {
+              if (created) setForkTargetId(undefined);
+            });
+          }}
+        />
+      ) : null}
     </section>
   );
 }
