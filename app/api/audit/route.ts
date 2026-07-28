@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
-import { runAudit, runAuditStream } from "@/lib/audit/run-audit";
+import { runAuditStream } from "@/lib/audit/run-audit";
+import { getOptionalTraceRepository } from "@/lib/agentscope/infrastructure/postgres/database";
 import {
   ProviderConfigurationError,
   ProviderResponseError,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/providers/errors";
 import { auditRequestSchema } from "@/lib/schemas";
 import type { AuditStreamMessage } from "@/lib/types";
+import type { TraceRepository } from "@/lib/agentscope/application/trace-repository";
 
 function sseMessage(message: AuditStreamMessage) {
   return `event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`;
@@ -26,6 +28,15 @@ function errorResponse(error: unknown) {
   }
 
   return Response.json({ error: "Unexpected audit failure." }, { status: 500 });
+}
+
+async function persistTraceMessage(
+  repository: TraceRepository | null,
+  message: AuditStreamMessage,
+) {
+  if (repository && message.type === "trace_event") {
+    await repository.append(message.event);
+  }
 }
 
 export async function POST(request: Request) {
@@ -49,12 +60,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    const traceRepository = getOptionalTraceRepository();
+
     if (request.headers.get("accept") === "text/event-stream") {
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
           try {
             for await (const message of runAuditStream(parsed.data)) {
+              await persistTraceMessage(traceRepository, message);
               controller.enqueue(encoder.encode(sseMessage(message)));
             }
           } catch (error) {
@@ -79,12 +93,17 @@ export async function POST(request: Request) {
           "cache-control": "no-cache, no-transform",
           connection: "keep-alive",
           "content-type": "text/event-stream; charset=utf-8",
+          "x-accel-buffering": "no",
         },
       });
     }
 
-    const result = await runAudit(parsed.data);
-    return Response.json(result);
+    for await (const message of runAuditStream(parsed.data)) {
+      await persistTraceMessage(traceRepository, message);
+      if (message.type === "result") return Response.json(message.result);
+    }
+
+    throw new Error("Audit stream completed without a result.");
   } catch (error) {
     return errorResponse(error);
   }
