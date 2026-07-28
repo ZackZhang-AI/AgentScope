@@ -40,6 +40,7 @@ export function AuditWorkbench() {
   const [pullRequestUrl, setPullRequestUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<AuditResponse | null>(null);
+  const [comparisonParent, setComparisonParent] = useState<AuditResponse | null>(null);
   const [sessions, setSessions] = useState<AuditResponse[]>([]);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -57,6 +58,7 @@ export function AuditWorkbench() {
     setIsRunning(true);
     setError(null);
     setResult(null);
+    setComparisonParent(null);
     setTraceEvents([]);
 
     try {
@@ -94,6 +96,7 @@ export function AuditWorkbench() {
 
         if (message.type === "result") {
           setResult(message.result);
+          setComparisonParent(null);
           saveSession(message.result);
           setSessions(loadSessions());
         }
@@ -161,6 +164,7 @@ export function AuditWorkbench() {
 
         if (message.type === "result") {
           childResult = message.result;
+          setComparisonParent(parent);
           setResult(message.result);
           saveSession(message.result);
           setSessions(loadSessions());
@@ -184,6 +188,11 @@ export function AuditWorkbench() {
 
   function restoreSession(session: AuditResponse) {
     setResult(session);
+    setComparisonParent(
+      session.trace.run.parentRunId
+        ? sessions.find((candidate) => candidate.id === session.trace.run.parentRunId) ?? null
+        : null,
+    );
     setTraceEvents([]);
     setProvider(session.provider);
     setInputType(session.inputMeta.inputType);
@@ -210,6 +219,7 @@ export function AuditWorkbench() {
       setInputType("diff");
       setSource(payload.source);
       setResult(null);
+      setComparisonParent(null);
       setTraceEvents([]);
     } catch (importError) {
       setError(
@@ -231,6 +241,7 @@ export function AuditWorkbench() {
     setContent("");
     setSource({ kind: "pasted" });
     setResult(null);
+    setComparisonParent(null);
     setTraceEvents([]);
     setError(null);
   }
@@ -286,6 +297,7 @@ export function AuditWorkbench() {
             provider={provider}
             isForking={isForking}
             onForkSpan={forkFromSpan}
+            parentProjection={comparisonParent?.trace}
           />
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
             <ReportPreview markdown={result?.reportMarkdown} />

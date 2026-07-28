@@ -34,6 +34,13 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   await expect(
     page.getByRole("treeitem").filter({ hasText: "checkpoint-restore" }),
   ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Run Compare" })).toBeVisible();
+  await expect(page.getByText("Parent vs child facts")).toBeVisible();
+  await page.getByRole("button", { name: "Eval Report" }).click();
+  await expect(page.getByText("Deterministic rule scores")).toBeVisible();
+  const evalDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Eval JSON" }).click();
+  await expect((await evalDownload).suggestedFilename()).toMatch(/agentscope-eval-.*\.json$/);
   await expect(page.getByText("Risk Score", { exact: true })).toBeVisible();
   const markdownDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Markdown" }).click();

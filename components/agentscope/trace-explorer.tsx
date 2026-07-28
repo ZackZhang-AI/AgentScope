@@ -33,6 +33,7 @@ import { DiagnosticsPanel } from "./diagnostics-panel";
 import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
 import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
 import { ReplayPreflightDialog } from "./replay-preflight-dialog";
+import { RunAnalysisPanel } from "./run-analysis-panel";
 
 type TraceExplorerProps = {
   events: TraceEvent[];
@@ -41,6 +42,7 @@ type TraceExplorerProps = {
   provider: string;
   isForking: boolean;
   onForkSpan: (spanId: string) => Promise<boolean>;
+  parentProjection?: RunProjection;
 };
 
 const kindIcon = {
@@ -77,6 +79,7 @@ export function TraceExplorer({
   provider,
   isForking,
   onForkSpan,
+  parentProjection,
 }: TraceExplorerProps) {
   const [cursor, setCursor] = useState<number | null>(null);
   const [selectedSpanId, setSelectedSpanId] = useState<string>();
@@ -306,6 +309,13 @@ export function TraceExplorer({
             />
           </div>
           <DiagnosticsPanel diagnostics={diagnostics} onSelectSpan={setSelectedSpanId} />
+          {visibleProjection?.run.completedAt ? (
+            <RunAnalysisPanel
+              projection={visibleProjection}
+              parentProjection={parentProjection}
+              onSelectSpan={setSelectedSpanId}
+            />
+          ) : null}
         </>
       )}
       {forkTarget && replayPreflight ? (
