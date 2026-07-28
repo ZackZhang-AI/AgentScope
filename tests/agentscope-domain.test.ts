@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import failedFixture from "./fixtures/traces/failed-repeated-tool.json";
-import forkedFixture from "./fixtures/traces/forked-successful-code-audit.json";
-import successfulFixture from "./fixtures/traces/successful-code-audit.json";
+import failedFixture from "../fixtures/agentscope/failed-repeated-tool.json";
+import forkedFixture from "../fixtures/agentscope/forked-successful-code-audit.json";
+import successfulFixture from "../fixtures/agentscope/successful-code-audit.json";
 import {
   assertRunTransition,
   assertSpanTransition,

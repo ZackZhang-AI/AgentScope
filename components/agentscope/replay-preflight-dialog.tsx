@@ -9,6 +9,7 @@ type ReplayPreflightDialogProps = {
   target: Span;
   preflight: ReplayPreflight;
   provider: string;
+  mode: "fixture" | "fork";
   isSubmitting: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -24,6 +25,7 @@ export function ReplayPreflightDialog({
   target,
   preflight,
   provider,
+  mode,
   isSubmitting,
   onClose,
   onConfirm,
@@ -53,7 +55,9 @@ export function ReplayPreflightDialog({
               Replay preflight
             </h2>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Fork {target.name} into a new child run. The parent trace remains unchanged.
+              {mode === "fixture"
+                ? `Replay ${target.name} with fixed fixture responses. No model or tool request will be sent.`
+                : `Fork ${target.name} into a new child run. The parent trace remains unchanged.`}
             </p>
           </div>
           <button
@@ -78,7 +82,11 @@ export function ReplayPreflightDialog({
               : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />}
             <div>
               <p className={`text-xs font-semibold ${blocked ? "text-red-900" : "text-emerald-900"}`}>
-                {blocked ? "Replay blocked" : "Ready to create a child run"}
+                {blocked
+                  ? "Replay blocked"
+                  : mode === "fixture"
+                    ? "Ready for deterministic Fixture Replay"
+                    : "Ready to create a child run"}
               </p>
               <p className={`mt-1 text-xs leading-5 ${blocked ? "text-red-800" : "text-emerald-800"}`}>
                 Checkpoint {preflight.checkpointId ?? "not available"}. Provider {provider}.
@@ -137,7 +145,9 @@ export function ReplayPreflightDialog({
             className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
           >
             <Play className="h-3.5 w-3.5" aria-hidden="true" />
-            {isSubmitting ? "Creating child run" : "Create child run"}
+            {isSubmitting
+              ? mode === "fixture" ? "Loading fixture branch" : "Creating child run"
+              : mode === "fixture" ? "Replay fixed fixture" : "Create child run"}
           </button>
         </footer>
       </dialog>

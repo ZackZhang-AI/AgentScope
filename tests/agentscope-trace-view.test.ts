@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import successfulFixture from "./fixtures/traces/successful-code-audit.json";
+import successfulFixture from "../fixtures/agentscope/successful-code-audit.json";
 import { projectTraceEvents } from "../lib/agentscope/domain";
 import {
   flattenSpanTree,

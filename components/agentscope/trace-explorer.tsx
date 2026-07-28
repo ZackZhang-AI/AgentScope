@@ -43,6 +43,7 @@ type TraceExplorerProps = {
   isForking: boolean;
   onForkSpan: (spanId: string) => Promise<boolean>;
   parentProjection?: RunProjection;
+  replayMode: "fixture" | "fork";
 };
 
 const kindIcon = {
@@ -80,6 +81,7 @@ export function TraceExplorer({
   isForking,
   onForkSpan,
   parentProjection,
+  replayMode,
 }: TraceExplorerProps) {
   const [cursor, setCursor] = useState<number | null>(null);
   const [selectedSpanId, setSelectedSpanId] = useState<string>();
@@ -323,6 +325,7 @@ export function TraceExplorer({
           target={forkTarget}
           preflight={replayPreflight}
           provider={provider}
+          mode={replayMode}
           isSubmitting={isForking}
           onClose={() => setForkTargetId(undefined)}
           onConfirm={() => {

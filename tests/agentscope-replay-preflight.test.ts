@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import failedFixture from "./fixtures/traces/failed-repeated-tool.json";
-import successfulFixture from "./fixtures/traces/successful-code-audit.json";
+import failedFixture from "../fixtures/agentscope/failed-repeated-tool.json";
+import successfulFixture from "../fixtures/agentscope/successful-code-audit.json";
 import { projectTraceEvents } from "../lib/agentscope/domain";
 import { buildReplayPreflight } from "../lib/agentscope/replay/preflight";
 

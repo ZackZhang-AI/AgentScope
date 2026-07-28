@@ -7,10 +7,12 @@ import { InputPanel } from "./input-panel";
 import { ReportPreview } from "./report-preview";
 import { SessionHistory } from "./session-history";
 import { TraceExplorer } from "./agentscope/trace-explorer";
+import { DemoRunLibrary } from "./agentscope/demo-run-library";
 import { sampleList } from "@/lib/samples";
 import { consumeAuditStream } from "@/lib/client/audit-stream";
 import { clearSessions, loadSessions, saveSession } from "@/lib/storage";
 import type { TraceEvent } from "@/lib/agentscope/domain/event";
+import type { DemoRun } from "@/lib/agentscope/fixtures/catalog";
 import type {
   AuditRequest,
   AuditResponse,
@@ -41,6 +43,7 @@ export function AuditWorkbench() {
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [comparisonParent, setComparisonParent] = useState<AuditResponse | null>(null);
+  const [activeDemo, setActiveDemo] = useState<DemoRun | null>(null);
   const [sessions, setSessions] = useState<AuditResponse[]>([]);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -59,6 +62,7 @@ export function AuditWorkbench() {
     setError(null);
     setResult(null);
     setComparisonParent(null);
+    setActiveDemo(null);
     setTraceEvents([]);
 
     try {
@@ -97,6 +101,7 @@ export function AuditWorkbench() {
         if (message.type === "result") {
           setResult(message.result);
           setComparisonParent(null);
+          setActiveDemo(null);
           saveSession(message.result);
           setSessions(loadSessions());
         }
@@ -123,6 +128,29 @@ export function AuditWorkbench() {
     const parent = result;
 
     try {
+      if (activeDemo) {
+        const response = await fetch("/api/v1/demo-runs");
+        if (!response.ok) throw new Error("Demo catalog could not be loaded.");
+        const payload = await response.json() as { runs: DemoRun[] };
+        const child = payload.runs.find(
+          (demo) =>
+            demo.result.trace.run.parentRunId === parent.id &&
+            demo.result.trace.run.forkedFromSpanId === spanId,
+        );
+        if (!child) {
+          throw new Error("No fixed fixture branch exists for this checkpoint.");
+        }
+
+        setTraceEvents(child.events);
+        setResult(child.result);
+        setComparisonParent(parent);
+        setActiveDemo(child);
+        saveSession(parent);
+        saveSession(child.result);
+        setSessions(loadSessions());
+        return true;
+      }
+
       const response = await fetch(`/api/v1/runs/${encodeURIComponent(parent.id)}/fork`, {
         method: "POST",
         headers: {
@@ -188,6 +216,7 @@ export function AuditWorkbench() {
 
   function restoreSession(session: AuditResponse) {
     setResult(session);
+    setActiveDemo(null);
     setComparisonParent(
       session.trace.run.parentRunId
         ? sessions.find((candidate) => candidate.id === session.trace.run.parentRunId) ?? null
@@ -220,6 +249,7 @@ export function AuditWorkbench() {
       setSource(payload.source);
       setResult(null);
       setComparisonParent(null);
+      setActiveDemo(null);
       setTraceEvents([]);
     } catch (importError) {
       setError(
@@ -242,6 +272,7 @@ export function AuditWorkbench() {
     setSource({ kind: "pasted" });
     setResult(null);
     setComparisonParent(null);
+    setActiveDemo(null);
     setTraceEvents([]);
     setError(null);
   }
@@ -249,6 +280,18 @@ export function AuditWorkbench() {
   function clearHistory() {
     clearSessions();
     setSessions([]);
+  }
+
+  function loadDemoRun(run: DemoRun, parent?: DemoRun) {
+    setResult(run.result);
+    setTraceEvents(run.events);
+    setComparisonParent(parent?.result ?? null);
+    setActiveDemo(run);
+    setProvider("mock");
+    setError(null);
+    saveSession(run.result);
+    if (parent) saveSession(parent.result);
+    setSessions(loadSessions());
   }
 
   return (
@@ -281,6 +324,7 @@ export function AuditWorkbench() {
             onReset={resetInput}
           />
           <SessionHistory sessions={sessions} onRestore={restoreSession} onClear={clearHistory} />
+          <DemoRunLibrary onLoad={loadDemoRun} />
         </div>
 
         <div className="grid content-start gap-4">
@@ -298,6 +342,7 @@ export function AuditWorkbench() {
             isForking={isForking}
             onForkSpan={forkFromSpan}
             parentProjection={comparisonParent?.trace}
+            replayMode={activeDemo ? "fixture" : "fork"}
           />
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
             <ReportPreview markdown={result?.reportMarkdown} />

@@ -103,3 +103,33 @@ test("public pull request import fills the diff input", async ({ page }) => {
   await expect(page.getByLabel("Code input")).toHaveValue(/imported = true/);
   await expect(page.getByText(/Imported from https:\/\/github.com/)).toBeVisible();
 });
+
+test("offline fixtures cover failure, replay, and comparison without execution requests", async ({ page }) => {
+  let executionRequests = 0;
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/audit" || /\/api\/v1\/runs\/.+\/fork$/.test(path)) {
+      executionRequests += 1;
+    }
+  });
+  await openWorkbench(page);
+
+  await page.getByRole("button", { name: /Successful trace/ }).click();
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: /Repeated tool failure/ }).click();
+  await expect(page.getByText("run_failure_001", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 duplicate tool calls")).toBeVisible();
+  await page.getByRole("button", { name: "Fork from this step" }).click();
+  await expect(page.getByText("Ready for deterministic Fixture Replay")).toBeVisible();
+  await page.getByRole("button", { name: "Replay fixed fixture" }).click();
+
+  await expect(page.getByText("run_fork_001", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run Compare" })).toBeVisible();
+  await expect(page.getByText("Parent vs child facts")).toBeVisible();
+  expect(executionRequests).toBe(0);
+
+  await page.getByRole("button", { name: /Fork recovery compare/ }).click();
+  await expect(page.getByText("run_fork_001", { exact: true })).toBeVisible();
+  await expect(page.getByText("Parent vs child facts")).toBeVisible();
+});
