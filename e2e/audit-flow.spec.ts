@@ -133,3 +133,35 @@ test("offline fixtures cover failure, replay, and comparison without execution r
   await expect(page.getByText("run_fork_001", { exact: true })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
 });
+
+test("trace tree filters, keyboard navigation, replay seek, and timeline zoom remain synchronized", async ({ page }) => {
+  await openWorkbench(page);
+  await page.getByRole("button", { name: /Successful trace/ }).click();
+
+  const treeItems = page.getByRole("treeitem");
+  await expect(treeItems).toHaveCount(5);
+  await page.getByRole("button", { name: "Collapse code-audit-agent" }).click();
+  await expect(treeItems).toHaveCount(1);
+  await page.getByRole("button", { name: "Expand code-audit-agent" }).click();
+
+  await page.getByLabel("Filter by span kind").selectOption("tool");
+  await expect(treeItems).toHaveCount(3);
+  await page.getByLabel("Filter by span kind").selectOption("all");
+  await page.getByPlaceholder("Filter spans").fill("final-answer");
+  await expect(treeItems).toHaveCount(2);
+  await page.getByPlaceholder("Filter spans").fill("");
+
+  const modelRow = treeItems.filter({ hasText: "inspect-code" });
+  await modelRow.click();
+  await modelRow.press("ArrowRight");
+  await expect(treeItems.filter({ hasText: "read_file" })).toHaveAttribute("aria-selected", "true");
+
+  await page.getByRole("button", { name: "Zoom timeline in" }).click();
+  await expect(page.getByLabel("Pan timeline viewport")).toBeVisible();
+  await page.getByLabel("Pan timeline viewport").fill("25");
+  await page.getByRole("button", { name: "Fit entire timeline" }).click();
+  await expect(page.getByLabel("Pan timeline viewport")).toHaveCount(0);
+
+  await page.getByLabel("Seek visual replay event").fill("5");
+  await expect(page.getByText(/Event 5\/15:/)).toBeVisible();
+});

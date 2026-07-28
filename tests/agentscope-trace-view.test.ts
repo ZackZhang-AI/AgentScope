@@ -6,6 +6,7 @@ import {
   formatDuration,
   getTimelineBar,
   getTraceBounds,
+  getTimelineViewportBar,
 } from "../lib/agentscope/presentation/trace-view";
 
 describe("AgentScope trace view", () => {
@@ -38,5 +39,36 @@ describe("AgentScope trace view", () => {
     expect(formatDuration(92)).toBe("92 ms");
     expect(formatDuration(1_250)).toBe("1.25 s");
     expect(formatDuration()).toBe("Running");
+  });
+
+  it("collapses descendants and preserves ancestor paths while filtering", () => {
+    const collapsed = flattenSpanTree(projection.spans, {
+      collapsedSpanIds: new Set(["span_success_model"]),
+    });
+    expect(collapsed.some((row) => row.span.id === "span_success_tool")).toBe(false);
+
+    const filtered = flattenSpanTree(projection.spans, {
+      collapsedSpanIds: new Set(["span_success_model"]),
+      filter: { kind: "tool", query: "read_file" },
+    });
+    expect(filtered.map((row) => row.span.id)).toEqual([
+      "span_success_root",
+      "span_success_model",
+      "span_success_tool",
+    ]);
+    expect(filtered.find((row) => row.span.id === "span_success_model")?.isExpanded).toBe(true);
+  });
+
+  it("clips timeline bars to the zoomed viewport", () => {
+    expect(getTimelineViewportBar(
+      { offsetPercent: 40, widthPercent: 20, durationMs: 10 },
+      2,
+      25,
+    )).toMatchObject({ offsetPercent: 30, widthPercent: 40 });
+    expect(getTimelineViewportBar(
+      { offsetPercent: 0, widthPercent: 10, durationMs: 10 },
+      2,
+      50,
+    )).toBeNull();
   });
 });

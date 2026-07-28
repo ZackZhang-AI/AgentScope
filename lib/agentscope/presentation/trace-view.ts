@@ -1,8 +1,11 @@
-import type { Span } from "../domain";
+import type { Span, SpanKind, SpanStatus } from "../domain/span";
 
 export type TraceRow = {
   span: Span;
   depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  hasErrorDescendant: boolean;
 };
 
 export type TimelineBar = {
@@ -11,8 +14,22 @@ export type TimelineBar = {
   durationMs: number;
 };
 
-export function flattenSpanTree(spans: readonly Span[]): TraceRow[] {
+export type TraceFilter = {
+  query?: string;
+  kind?: SpanKind;
+  status?: SpanStatus;
+  keyStepsOnly?: boolean;
+};
+
+export function flattenSpanTree(
+  spans: readonly Span[],
+  options: {
+    collapsedSpanIds?: ReadonlySet<string>;
+    filter?: TraceFilter;
+  } = {},
+): TraceRow[] {
   const children = new Map<string | undefined, Span[]>();
+  const byId = new Map(spans.map((span) => [span.id, span]));
 
   for (const span of spans) {
     const siblings = children.get(span.parentSpanId) ?? [];
@@ -26,18 +43,89 @@ export function flattenSpanTree(spans: readonly Span[]): TraceRow[] {
 
   const rows: TraceRow[] = [];
   const visited = new Set<string>();
+  const collapsed = options.collapsedSpanIds ?? new Set<string>();
+  const query = options.filter?.query?.trim().toLocaleLowerCase();
+  const filterActive = Boolean(
+    query || options.filter?.kind || options.filter?.status || options.filter?.keyStepsOnly,
+  );
+  const visibleIds = new Set<string>();
+
+  if (filterActive) {
+    for (const span of spans) {
+      const matches =
+        (!query || `${span.name} ${span.id}`.toLocaleLowerCase().includes(query)) &&
+        (!options.filter?.kind || span.kind === options.filter.kind) &&
+        (!options.filter?.status || span.status === options.filter.status) &&
+        (!options.filter?.keyStepsOnly || (
+          ["model", "tool", "handoff", "guardrail"].includes(span.kind) ||
+          span.status === "error"
+        ));
+      if (!matches) continue;
+
+      let current: Span | undefined = span;
+      while (current && !visibleIds.has(current.id)) {
+        visibleIds.add(current.id);
+        current = current.parentSpanId ? byId.get(current.parentSpanId) : undefined;
+      }
+    }
+  }
+
+  const errorMemo = new Map<string, boolean>();
+  function hasError(span: Span): boolean {
+    const cached = errorMemo.get(span.id);
+    if (cached !== undefined) return cached;
+    const result = span.status === "error" || (children.get(span.id) ?? []).some(hasError);
+    errorMemo.set(span.id, result);
+    return result;
+  }
 
   function visit(span: Span, depth: number) {
     if (visited.has(span.id)) return;
     visited.add(span.id);
-    rows.push({ span, depth });
-    for (const child of children.get(span.id) ?? []) visit(child, depth + 1);
+    if (filterActive && !visibleIds.has(span.id)) return;
+    const childSpans = children.get(span.id) ?? [];
+    const isExpanded = filterActive || !collapsed.has(span.id);
+    rows.push({
+      span,
+      depth,
+      hasChildren: childSpans.length > 0,
+      isExpanded,
+      hasErrorDescendant: childSpans.some(hasError),
+    });
+    if (isExpanded) {
+      for (const child of childSpans) visit(child, depth + 1);
+    } else {
+      const markHidden = (hidden: Span) => {
+        if (visited.has(hidden.id)) return;
+        visited.add(hidden.id);
+        for (const child of children.get(hidden.id) ?? []) markHidden(child);
+      };
+      for (const child of childSpans) markHidden(child);
+    }
   }
 
   for (const root of children.get(undefined) ?? []) visit(root, 0);
   for (const span of spans) visit(span, 0);
 
   return rows;
+}
+
+export function getTimelineViewportBar(
+  bar: TimelineBar,
+  zoom: number,
+  viewportStartPercent: number,
+) {
+  const viewportWidth = 100 / Math.max(1, zoom);
+  const viewportEnd = viewportStartPercent + viewportWidth;
+  const barStart = Math.max(bar.offsetPercent, viewportStartPercent);
+  const barEnd = Math.min(bar.offsetPercent + bar.widthPercent, viewportEnd);
+
+  if (barEnd <= barStart) return null;
+  return {
+    ...bar,
+    offsetPercent: ((barStart - viewportStartPercent) / viewportWidth) * 100,
+    widthPercent: Math.max(0.8, ((barEnd - barStart) / viewportWidth) * 100),
+  };
 }
 
 export function getTraceBounds(spans: readonly Span[], now = Date.now()) {
