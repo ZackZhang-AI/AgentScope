@@ -9,7 +9,10 @@ import { SessionHistory } from "./session-history";
 import { TraceExplorer } from "./agentscope/trace-explorer";
 import { DemoRunLibrary } from "./agentscope/demo-run-library";
 import { sampleList } from "@/lib/samples";
-import { consumeAuditStream } from "@/lib/client/audit-stream";
+import {
+  consumeAuditStream,
+  resumeTraceEvents,
+} from "@/lib/client/audit-stream";
 import { clearSessions, loadSessions, saveSession } from "@/lib/storage";
 import type { TraceEvent } from "@/lib/agentscope/domain/event";
 import type { DemoRun } from "@/lib/agentscope/fixtures/catalog";
@@ -57,6 +60,25 @@ export function AuditWorkbench() {
     return () => window.clearTimeout(timeout);
   }, []);
 
+  function appendTraceEvent(event: TraceEvent) {
+    setTraceEvents((current) => {
+      if (current.some((candidate) => candidate.eventId === event.eventId)) {
+        return current;
+      }
+      return [...current, event].sort(
+        (left, right) => left.sequence - right.sequence,
+      );
+    });
+  }
+
+  async function resumeInterruptedTrace(runId: string, after: number) {
+    return resumeTraceEvents({
+      runId,
+      after,
+      onEvent: appendTraceEvent,
+    });
+  }
+
   async function runAudit() {
     setIsRunning(true);
     setError(null);
@@ -88,30 +110,52 @@ export function AuditWorkbench() {
       }
 
       let streamError: string | null = null;
-      await consumeAuditStream(response, (message) => {
-        if (message.type === "trace_event") {
-          setTraceEvents((current) => {
-            if (current.some((event) => event.eventId === message.event.eventId)) {
-              return current;
-            }
-            return [...current, message.event].sort((left, right) => left.sequence - right.sequence);
-          });
-        }
+      let activeRunId: string | undefined;
+      let lastSequence = 0;
+      let resultReceived = false;
+      let transportError: unknown;
+      try {
+        await consumeAuditStream(response, (message) => {
+          if (message.type === "trace_event") {
+            activeRunId = message.event.runId;
+            lastSequence = Math.max(lastSequence, message.event.sequence);
+            appendTraceEvent(message.event);
+          }
 
-        if (message.type === "result") {
-          setResult(message.result);
-          setComparisonParent(null);
-          setActiveDemo(null);
-          saveSession(message.result);
-          setSessions(loadSessions());
-        }
+          if (message.type === "result") {
+            resultReceived = true;
+            setResult(message.result);
+            setComparisonParent(null);
+            setActiveDemo(null);
+            saveSession(message.result);
+            setSessions(loadSessions());
+          }
 
-        if (message.type === "error") {
-          streamError = message.error;
-        }
-      });
+          if (message.type === "error") {
+            streamError = message.error;
+          }
+        });
+      } catch (streamFailure) {
+        transportError = streamFailure;
+      }
 
       if (streamError) throw new Error(streamError);
+      if (
+        !resultReceived &&
+        activeRunId &&
+        response.headers.get("x-agentscope-resumable") === "true"
+      ) {
+        const recovery = await resumeInterruptedTrace(activeRunId, lastSequence);
+        if (recovery.status === "terminal") {
+          throw new Error(
+            `Connection interrupted. Trace ${activeRunId} was recovered through event ${recovery.lastSequence}, but the final report response was not delivered.`,
+          );
+        }
+      }
+      if (transportError) throw transportError;
+      if (!resultReceived) {
+        throw new Error("Audit stream completed without a result.");
+      }
     } catch (auditError) {
       const message = auditError instanceof Error ? auditError.message : "Audit request failed.";
       setError(message);
@@ -179,29 +223,46 @@ export function AuditWorkbench() {
       setTraceEvents([]);
       let childResult: AuditResponse | null = null;
       let streamError: string | null = null;
+      let activeRunId: string | undefined;
+      let lastSequence = 0;
+      let transportError: unknown;
 
-      await consumeAuditStream(response, (message) => {
-        if (message.type === "trace_event") {
-          setTraceEvents((current) => {
-            if (current.some((event) => event.eventId === message.event.eventId)) {
-              return current;
-            }
-            return [...current, message.event].sort((left, right) => left.sequence - right.sequence);
-          });
-        }
+      try {
+        await consumeAuditStream(response, (message) => {
+          if (message.type === "trace_event") {
+            activeRunId = message.event.runId;
+            lastSequence = Math.max(lastSequence, message.event.sequence);
+            appendTraceEvent(message.event);
+          }
 
-        if (message.type === "result") {
-          childResult = message.result;
-          setComparisonParent(parent);
-          setResult(message.result);
-          saveSession(message.result);
-          setSessions(loadSessions());
-        }
+          if (message.type === "result") {
+            childResult = message.result;
+            setComparisonParent(parent);
+            setResult(message.result);
+            saveSession(message.result);
+            setSessions(loadSessions());
+          }
 
-        if (message.type === "error") streamError = message.error;
-      });
+          if (message.type === "error") streamError = message.error;
+        });
+      } catch (streamFailure) {
+        transportError = streamFailure;
+      }
 
       if (streamError) throw new Error(streamError);
+      if (
+        !childResult &&
+        activeRunId &&
+        response.headers.get("x-agentscope-resumable") === "true"
+      ) {
+        const recovery = await resumeInterruptedTrace(activeRunId, lastSequence);
+        if (recovery.status === "terminal") {
+          throw new Error(
+            `Connection interrupted. Child trace ${activeRunId} was recovered through event ${recovery.lastSequence}, but the final report response was not delivered.`,
+          );
+        }
+      }
+      if (transportError) throw transportError;
       if (!childResult) throw new Error("Fork stream completed without a child run.");
       return true;
     } catch (forkError) {

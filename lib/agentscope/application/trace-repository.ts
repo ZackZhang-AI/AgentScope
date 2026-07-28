@@ -34,5 +34,6 @@ export interface TraceRepository {
   appendMany(events: readonly TraceEvent[]): Promise<AppendTraceResult>;
   getProjection(runId: string): Promise<RunProjection | null>;
   listEventsAfter(runId: string, sequence: number): Promise<TraceEvent[]>;
+  listStaleRunningRunIds(staleBefore: string, limit?: number): Promise<string[]>;
   listRuns(input?: ListRunsInput): Promise<RunSummary[]>;
 }

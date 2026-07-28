@@ -11,7 +11,10 @@ import type { AuditStreamMessage } from "@/lib/types";
 import type { TraceRepository } from "@/lib/agentscope/application/trace-repository";
 
 function sseMessage(message: AuditStreamMessage) {
-  return `event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`;
+  const id = message.type === "trace_event"
+    ? `id: ${message.event.sequence}\n`
+    : "";
+  return `${id}event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`;
 }
 
 function errorResponse(error: unknown) {
@@ -66,24 +69,43 @@ export async function POST(request: Request) {
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
+          let clientConnected = true;
           try {
             for await (const message of runAuditStream(parsed.data)) {
               await persistTraceMessage(traceRepository, message);
-              controller.enqueue(encoder.encode(sseMessage(message)));
+              if (clientConnected) {
+                try {
+                  controller.enqueue(encoder.encode(sseMessage(message)));
+                } catch {
+                  clientConnected = false;
+                }
+              }
             }
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Unexpected audit failure.";
-            controller.enqueue(
-              encoder.encode(
-                sseMessage({
-                  type: "error",
-                  error: message,
-                }),
-              ),
-            );
+            if (clientConnected) {
+              try {
+                controller.enqueue(
+                  encoder.encode(
+                    sseMessage({
+                      type: "error",
+                      error: message,
+                    }),
+                  ),
+                );
+              } catch {
+                clientConnected = false;
+              }
+            }
           } finally {
-            controller.close();
+            if (clientConnected) {
+              try {
+                controller.close();
+              } catch {
+                // The client may disconnect after the final message is persisted.
+              }
+            }
           }
         },
       });
@@ -94,6 +116,7 @@ export async function POST(request: Request) {
           connection: "keep-alive",
           "content-type": "text/event-stream; charset=utf-8",
           "x-accel-buffering": "no",
+          "x-agentscope-resumable": traceRepository ? "true" : "false",
         },
       });
     }

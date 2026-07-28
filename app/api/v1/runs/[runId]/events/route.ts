@@ -1,10 +1,18 @@
 import { z } from "zod";
 import { getTraceRepository } from "@/lib/agentscope/infrastructure/postgres/database";
+import type { TraceEvent } from "@/lib/agentscope/domain";
 
 const paramsSchema = z.object({
   runId: z.string().min(1).max(200).regex(/^[a-zA-Z0-9:_-]+$/),
   after: z.coerce.number().int().nonnegative().default(0),
 });
+
+function toSseEvent(event: TraceEvent) {
+  return `id: ${event.sequence}\nevent: trace_event\ndata: ${JSON.stringify({
+    type: "trace_event",
+    event,
+  })}\n\n`;
+}
 
 export async function GET(
   request: Request,
@@ -21,9 +29,10 @@ export async function GET(
   }
 
   const url = new URL(request.url);
+  const lastEventId = request.headers.get("last-event-id");
   const parsed = paramsSchema.safeParse({
     runId: (await params).runId,
-    after: url.searchParams.get("after") ?? undefined,
+    after: url.searchParams.get("after") ?? lastEventId ?? undefined,
   });
   if (!parsed.success) {
     return Response.json(
@@ -37,6 +46,15 @@ export async function GET(
       parsed.data.runId,
       parsed.data.after,
     );
+    if (request.headers.get("accept")?.includes("text/event-stream")) {
+      return new Response(events.map(toSseEvent).join(""), {
+        headers: {
+          "cache-control": "no-cache, no-transform",
+          "content-type": "text/event-stream; charset=utf-8",
+          "x-accel-buffering": "no",
+        },
+      });
+    }
     return Response.json({ events });
   } catch {
     return Response.json(

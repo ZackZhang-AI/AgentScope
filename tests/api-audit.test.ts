@@ -58,8 +58,10 @@ describe("POST /api/audit", () => {
     const stream = await response.text();
 
     expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(response.headers.get("x-agentscope-resumable")).toBe("false");
     expect(stream).toContain("event: trace");
     expect(stream).toContain("event: trace_event");
+    expect(stream).toContain("id: 1");
     expect(stream).toContain('"type":"run.created"');
     expect(stream).toContain('"type":"span.started"');
     expect(stream).toContain('"status":"running"');

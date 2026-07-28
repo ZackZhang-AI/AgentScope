@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import successfulFixture from "../fixtures/agentscope/successful-code-audit.json";
 
 async function openWorkbench(page: Page) {
   await page.goto("/");
@@ -164,4 +165,52 @@ test("trace tree filters, keyboard navigation, replay seek, and timeline zoom re
 
   await page.getByLabel("Seek visual replay event").fill("5");
   await expect(page.getByText(/Event 5\/15:/)).toBeVisible();
+});
+
+test("an interrupted audit stream resumes from its last persisted sequence", async ({ page }) => {
+  const initialEvents = successfulFixture.events.filter(
+    (event) => event.sequence <= 5,
+  );
+  const remainingEvents = successfulFixture.events.filter(
+    (event) => event.sequence > 5,
+  );
+  const initialStream = initialEvents
+    .map(
+      (event) =>
+        `id: ${event.sequence}\nevent: trace_event\ndata: ${JSON.stringify({
+          type: "trace_event",
+          event,
+        })}\n\n`,
+    )
+    .join("");
+
+  await page.route("**/api/audit", async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "x-agentscope-resumable": "true",
+      },
+      body: initialStream,
+    });
+  });
+  await page.route(
+    "**/api/v1/runs/run_success_001/events?after=5",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ events: remainingEvents }),
+      });
+    },
+  );
+  await openWorkbench(page);
+
+  await page.getByRole("button", { name: "Run Audit" }).click();
+
+  await expect(
+    page.getByText(/Trace run_success_001 was recovered through event 15/),
+  ).toBeVisible();
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
+  await expect(page.getByRole("treeitem")).toHaveCount(5);
 });

@@ -21,6 +21,7 @@ import {
   PostgresTraceRepository,
   TraceEventConflictError,
 } from "../lib/agentscope/infrastructure/postgres/postgres-trace-repository";
+import { recoverInterruptedRuns } from "../lib/agentscope/application/recover-interrupted-runs";
 import { closeDatabasePool } from "../lib/agentscope/infrastructure/postgres/database";
 import { POST as runAudit } from "../app/api/audit/route";
 import { POST as forkRun } from "../app/api/v1/runs/[runId]/fork/route";
@@ -65,6 +66,31 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     expect(stored?.spans).toHaveLength(5);
     expect(eventsAfterPlan[0].sequence).toBe(6);
     expect(eventsAfterPlan.at(-1)?.sequence).toBe(15);
+  });
+
+  it("recovers a stale running projection into an auditable error terminal", async () => {
+    const fixture = traceFixtureSchema.parse(successfulFixture);
+    await repository.appendMany(
+      fixture.events.filter((event) => event.sequence <= 9),
+    );
+    await pool.query(
+      "UPDATE agentscope_runs SET updated_at = NOW() - INTERVAL '10 minutes'",
+    );
+
+    const result = await recoverInterruptedRuns(repository, {
+      staleBefore: new Date(Date.now() - 5 * 60_000).toISOString(),
+      recoveredAt: "2026-07-28T12:00:00.000Z",
+    });
+    const recovered = await repository.getProjection("run_success_001");
+
+    expect(result.recoveredRunIds).toEqual(["run_success_001"]);
+    expect(recovered?.run.status).toBe("error");
+    expect(
+      recovered?.spans.some(
+        (span) => span.error?.type === "runner_interrupted",
+      ),
+    ).toBe(true);
+    expect(recovered?.dataQualityIssues).toHaveLength(0);
   });
 
   it("treats the same event as idempotent and rejects conflicting content", async () => {

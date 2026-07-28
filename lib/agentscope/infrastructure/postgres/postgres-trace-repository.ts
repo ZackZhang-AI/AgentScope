@@ -154,6 +154,19 @@ export class PostgresTraceRepository implements TraceRepository {
     return result.rows.map((row) => traceEventSchema.parse(row.event_json));
   }
 
+  async listStaleRunningRunIds(staleBefore: string, limit = 100) {
+    const boundedLimit = Math.max(1, Math.min(limit, 500));
+    const result = await this.pool.query<{ id: string }>(
+      `SELECT id
+       FROM agentscope_runs
+       WHERE status = 'running' AND updated_at < $1
+       ORDER BY updated_at ASC
+       LIMIT $2`,
+      [staleBefore, boundedLimit],
+    );
+    return result.rows.map((row) => row.id);
+  }
+
   async listRuns(input: ListRunsInput = {}): Promise<RunSummary[]> {
     const limit = Math.max(1, Math.min(input.limit ?? 50, 100));
     const result = await this.pool.query<RunSummaryRow>(
