@@ -24,3 +24,11 @@
 - GitHub PR 导入仅访问固定 GitHub API 域名
 - CI 持续运行类型检查、Lint、测试、确定性评测和生产构建
 - 生产依赖使用 `npm audit --omit=dev` 检查
+
+## 已知开发依赖公告
+
+截至 2026-07-28，完整 `npm audit` 会报告 ESLint 9 经由 `minimatch` 引入的
+`brace-expansion` DoS 公告。该依赖仅用于本地和 CI 的静态检查，不进入生产
+运行时；`npm audit --omit=dev` 为 0。直接升级 ESLint 10 会与当前 Next.js
+React/Import 插件不兼容，因此项目暂时保留可用的 ESLint 9，并通过 Dependabot
+跟踪上游兼容更新。
