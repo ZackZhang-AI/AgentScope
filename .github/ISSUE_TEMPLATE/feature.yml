@@ -1,0 +1,27 @@
+name: 功能建议
+description: 提议新的审查规则、Provider 或工作台能力
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 请先描述使用场景和当前限制。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 说明预期交互、输入输出和验收方式。
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 范围确认
+      options:
+        - label: 该建议与代码审计或 Harness Engineering 直接相关
+          required: true

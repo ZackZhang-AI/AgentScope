@@ -4,14 +4,6 @@ import { runDeepSeekAudit } from "../lib/providers/deepseek";
 const validPayload = {
   summary: "DeepSeek found one issue.",
   riskScore: 61,
-  events: [
-    {
-      stage: "intake",
-      status: "complete",
-      title: "Input intake",
-      detail: "Parsed input.",
-    },
-  ],
   findings: [
     {
       severity: "medium",
@@ -21,13 +13,6 @@ const validPayload = {
       recommendation: "Add a targeted regression test before merge.",
     },
   ],
-  evalCard: {
-    reproducibility: 84,
-    traceability: 80,
-    testability: 72,
-    confidence: 75,
-    score: 78,
-  },
 };
 
 describe("runDeepSeekAudit", () => {
@@ -61,11 +46,12 @@ describe("runDeepSeekAudit", () => {
       inputType: "files",
       provider: "deepseek",
       intensity: "quick",
+      rules: ["security", "testing"],
     });
 
-    expect(result.provider).toBe("deepseek");
+    expect(result.model).toBe("deepseek-v4-flash");
     expect(result.summary).toBe("DeepSeek found one issue.");
-    expect(result.reportMarkdown).toContain("HarnessLab Audit Report");
+    expect(result.findings).toHaveLength(1);
   });
 
   it("throws a provider response error for non-json model content", async () => {
@@ -88,6 +74,7 @@ describe("runDeepSeekAudit", () => {
         inputType: "files",
         provider: "deepseek",
         intensity: "quick",
+        rules: ["security"],
       }),
     ).rejects.toThrow(/valid JSON/);
   });

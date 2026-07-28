@@ -25,7 +25,7 @@ export function AppHeader({ provider }: AppHeaderProps) {
           Provider: <span className="font-medium capitalize text-zinc-950">{provider}</span>
         </span>
         <a
-          href="https://github.com"
+          href="https://github.com/ZackZhang-AI/HarnessLab"
           className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
           target="_blank"
           rel="noreferrer"

@@ -24,6 +24,16 @@ describe("generateReportMarkdown", () => {
         confidence: 82,
         score: 84,
       },
+      provider: "mock",
+      model: "mock-heuristic-v2",
+      rules: ["security", "testing"],
+      metrics: {
+        startedAt: "2026-07-28T00:00:00.000Z",
+        completedAt: "2026-07-28T00:00:00.010Z",
+        durationMs: 10,
+        providerLatencyMs: 1,
+        promptVersion: "audit-v2",
+      },
     });
 
     expect(markdown).toContain("Audit found one authorization issue.");
@@ -31,5 +41,6 @@ describe("generateReportMarkdown", () => {
     expect(markdown).toContain("Missing authorization check");
     expect(markdown).toContain("The route trusts userId");
     expect(markdown).toContain("Resolve the user");
+    expect(markdown).toContain("Prompt version: audit-v2");
   });
 });

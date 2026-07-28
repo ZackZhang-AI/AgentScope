@@ -1,9 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openWorkbench(page: Page) {
+  await page.goto("/");
+  await expect(page.locator("main[data-hydrated='true']")).toBeVisible();
+}
 
 test("sample audit flow shows trace, findings, and exports", async ({ page }) => {
-  await page.goto("/");
+  await openWorkbench(page);
 
   await page.getByRole("button", { name: "SQL injection risk" }).click();
+  await expect(page.getByLabel("Code input")).toHaveValue(/select \* from users/);
   await page.getByRole("button", { name: "Run Audit" }).click();
 
   await expect(
@@ -14,16 +20,24 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   ).toBeVisible();
   await expect(page.getByText("Harness Trace")).toBeVisible();
   await expect(page.getByText("Risk Score", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Export Markdown" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Export JSON" })).toBeEnabled();
+  const markdownDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Markdown" }).click();
+  await expect((await markdownDownload).suggestedFilename()).toMatch(/\.md$/);
+
+  const jsonDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export JSON" }).click();
+  await expect((await jsonDownload).suggestedFilename()).toMatch(/\.json$/);
+  await expect(page.getByRole("button", { name: "Copy PR Comment" })).toBeEnabled();
 });
 
 test("provider switching and session restore remain usable", async ({ page }) => {
-  await page.goto("/");
+  await openWorkbench(page);
 
   await page.getByRole("button", { name: "React auth bug" }).click();
   await page.getByLabel("Provider").selectOption("deepseek");
   await expect(page.getByText("DeepSeek requires DEEPSEEK_API_KEY on the server.")).toBeVisible();
+  await page.getByLabel("Provider").selectOption("minimax");
+  await expect(page.getByText("MiniMax requires MINIMAX_API_KEY on the server.")).toBeVisible();
   await page.getByLabel("Provider").selectOption("mock");
   await page.getByRole("button", { name: "Run Audit" }).click();
   await expect(
@@ -35,9 +49,35 @@ test("provider switching and session restore remain usable", async ({ page }) =>
 });
 
 test("mobile layout keeps primary controls visible", async ({ page }) => {
-  await page.goto("/");
+  await openWorkbench(page);
 
   await expect(page.getByRole("heading", { name: "HarnessLab" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run Audit" })).toBeVisible();
   await expect(page.getByLabel("Code input")).toBeVisible();
+});
+
+test("public pull request import fills the diff input", async ({ page }) => {
+  await page.route("**/api/github/pr", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        content: "diff --git a/app.ts b/app.ts\n+const imported = true;",
+        inputType: "diff",
+        source: {
+          kind: "github-pr",
+          url: "https://github.com/acme/repo/pull/42",
+        },
+      }),
+    });
+  });
+  await openWorkbench(page);
+
+  await page
+    .getByLabel("Public GitHub PR")
+    .fill("https://github.com/acme/repo/pull/42");
+  await page.getByRole("button", { name: "Import pull request" }).click();
+
+  await expect(page.getByLabel("Code input")).toHaveValue(/imported = true/);
+  await expect(page.getByText(/Imported from https:\/\/github.com/)).toBeVisible();
 });

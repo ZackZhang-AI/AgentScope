@@ -1,20 +1,28 @@
 # HarnessLab
 
-HarnessLab is a Vercel-ready Code Agent Audit Workbench that turns pasted diffs into observable AI audit traces, structured findings, risk scores, and exportable review reports.
+[中文说明](./README.md) | [Architecture (Chinese)](./docs/architecture.zh-CN.md)
 
-It is not a generic AI chat wrapper. The product surface is built around Harness Engineering: input intake, planning, inspection, finding extraction, evaluation, and report generation are visible as first-class trace artifacts.
+HarnessLab is a Code Agent Audit Workbench that turns diffs, file snippets, and
+public GitHub pull requests into observable audit traces, structured findings,
+deterministic process-quality scores, and review-ready reports.
+
+It is not a generic chat wrapper. Models produce findings; the Harness owns
+validation, orchestration, trace events, evaluation, metrics, and exports.
+
+![HarnessLab desktop workbench](./public/harnesslab-desktop.png)
 
 ## Features
 
-- Paste a unified diff or file snippet.
-- Choose `mock` or `deepseek` provider.
-- Choose `quick` or `standard` audit intensity.
-- View the Harness timeline from intake to report.
-- Inspect structured findings with severity, evidence, and recommendations.
-- Review risk score and eval card.
-- Export Markdown report and JSON trace.
-- Restore recent sessions from browser localStorage.
-- Deploy on Vercel with mock mode working by default.
+- Real-time SSE trace across six audit stages
+- Mock, DeepSeek, and MiniMax providers
+- Security, reliability, testing, maintainability, and performance rules
+- Public GitHub pull request import
+- Server-side Zod validation and model JSON recovery
+- Provider latency, token usage, and prompt-version metrics
+- Deterministic Eval Card generated outside the model
+- Markdown, JSON, and pull-request comment exports
+- Versioned browser localStorage session history
+- Reproducible mock evaluation suite enforced by CI
 
 ## Local Development
 
@@ -23,28 +31,29 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and run a sample audit with Mock Demo.
+Open `http://localhost:3000`. Mock Demo requires no API key.
 
-## DeepSeek Provider
-
-Create `.env.local`:
+Optional `.env.local` values:
 
 ```bash
-DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_API_KEY=
 DEEPSEEK_MODEL=deepseek-v4-flash
+MINIMAX_API_KEY=
+MINIMAX_MODEL=MiniMax-M2.7
+GITHUB_TOKEN=
 ```
 
-Then select `DeepSeek` in the provider menu. DeepSeek calls are made server-side through `POST /api/audit`, so the API key is never exposed to the browser.
-
-## Tests
+## Verification
 
 ```bash
-npm test
+npm run typecheck
 npm run lint
+npm test
+npm run eval
 npm run build
-npx playwright test
+npm run e2e
 ```
 
 ## License
 
-MIT
+[MIT](./LICENSE)

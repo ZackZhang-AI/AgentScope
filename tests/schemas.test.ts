@@ -35,6 +35,26 @@ describe("auditRequestSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts MiniMax and rejects an empty rule selection", () => {
+    const valid = auditRequestSchema.safeParse({
+      content: "const ok = true;",
+      inputType: "files",
+      provider: "minimax",
+      intensity: "standard",
+      rules: ["security", "performance"],
+    });
+    const invalid = auditRequestSchema.safeParse({
+      content: "const ok = true;",
+      inputType: "files",
+      provider: "mock",
+      intensity: "standard",
+      rules: [],
+    });
+
+    expect(valid.success).toBe(true);
+    expect(invalid.success).toBe(false);
+  });
+
   it("rejects oversized content", () => {
     const result = auditRequestSchema.safeParse({
       content: "a".repeat(60001),
