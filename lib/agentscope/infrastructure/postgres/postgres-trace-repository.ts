@@ -7,6 +7,10 @@ import {
   type RunProjection,
   type TraceEvent,
 } from "../../domain";
+import {
+  analysisRecordSchema,
+  type AnalysisRecord,
+} from "../../analysis/analysis-record";
 import type {
   AppendTraceResult,
   ListRunsInput,
@@ -20,6 +24,10 @@ type EventRow = {
 
 type ProjectionRow = {
   projection: unknown;
+};
+
+type AnalysisRow = {
+  analysis_json: unknown;
 };
 
 type RunSummaryRow = {
@@ -223,6 +231,58 @@ export class PostgresTraceRepository implements TraceRepository {
       [runId, input.name ?? null, input.tags ?? null],
     );
     return result.rows[0] ? this.#toRunSummary(result.rows[0]) : null;
+  }
+
+  async saveAnalyses(input: readonly AnalysisRecord[]): Promise<void> {
+    if (input.length === 0) return;
+    const records = input.map((record) => analysisRecordSchema.parse(record));
+    const runId = records[0].runId;
+    if (records.some((record) => record.runId !== runId)) {
+      throw new Error("An analysis batch can only contain one run.");
+    }
+
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const record of records) {
+        await client.query(
+          `INSERT INTO agentscope_analyses (
+             id, run_id, analysis_type, algorithm_version,
+             input_trace_sequence, analysis_json, created_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            record.id,
+            record.runId,
+            record.type,
+            record.algorithmVersion,
+            record.inputTraceSequence,
+            record,
+            record.createdAt,
+          ],
+        );
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async listAnalyses(runId: string): Promise<AnalysisRecord[]> {
+    const result = await this.pool.query<AnalysisRow>(
+      `SELECT analysis_json
+       FROM agentscope_analyses
+       WHERE run_id = $1
+       ORDER BY created_at DESC, analysis_type ASC`,
+      [runId],
+    );
+    return result.rows.map((row) =>
+      analysisRecordSchema.parse(row.analysis_json),
+    );
   }
 
   #toRunSummary(row: RunSummaryRow): RunSummary {

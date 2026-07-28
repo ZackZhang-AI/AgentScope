@@ -22,6 +22,7 @@ import {
   TraceEventConflictError,
 } from "../lib/agentscope/infrastructure/postgres/postgres-trace-repository";
 import { recoverInterruptedRuns } from "../lib/agentscope/application/recover-interrupted-runs";
+import { deriveRunAnalyses } from "../lib/agentscope/analysis/analysis-record";
 import { closeDatabasePool } from "../lib/agentscope/infrastructure/postgres/database";
 import { POST as runAudit } from "../app/api/audit/route";
 import { POST as forkRun } from "../app/api/v1/runs/[runId]/fork/route";
@@ -162,6 +163,31 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     expect(projectionAfter).toEqual(projectionBefore);
   });
 
+  it("persists versioned derived analyses against an immutable trace sequence", async () => {
+    const fixture = traceFixtureSchema.parse(successfulFixture);
+    await repository.appendMany(fixture.events);
+    const projection = await repository.getProjection("run_success_001");
+    expect(projection).not.toBeNull();
+
+    const analyses = deriveRunAnalyses(
+      projection!,
+      "2026-07-28T12:00:00.000Z",
+    );
+    await repository.saveAnalyses(analyses);
+    await repository.saveAnalyses(analyses);
+    const stored = await repository.listAnalyses("run_success_001");
+
+    expect(stored).toHaveLength(2);
+    expect(stored.every(
+      (analysis) => analysis.inputTraceSequence === projection?.lastSequence,
+    )).toBe(true);
+    expect(stored.find((analysis) => analysis.type === "eval")?.payload)
+      .toMatchObject({
+        reportSchemaVersion: 1,
+        evaluator: "agentscope-deterministic-v1",
+      });
+  });
+
   it("persists the real audit API trace when DATABASE_URL is configured", async () => {
     vi.stubEnv("DATABASE_URL", databaseUrl);
     const response = await runAudit(
@@ -179,11 +205,16 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     );
     const result = await response.json();
     const stored = await repository.getProjection(result.id);
+    const analyses = await repository.listAnalyses(result.id);
 
     expect(response.status).toBe(200);
     expect(stored?.run.id).toBe(result.id);
     expect(stored?.run.status).toBe(result.trace.run.status);
     expect(stored?.spans.length).toBe(result.trace.spans.length);
+    expect(analyses.map((analysis) => analysis.type).sort()).toEqual([
+      "diagnostics",
+      "eval",
+    ]);
   });
 
   it("persists a fork as a separate child without mutating its parent", async () => {
@@ -228,6 +259,9 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
         message.type === "result",
     )?.result;
     const child = result ? await repository.getProjection(result.id) : null;
+    const childAnalyses = result
+      ? await repository.listAnalyses(result.id)
+      : [];
     const parentAfter = await repository.getProjection(parent.id);
 
     expect(response.status).toBe(200);
@@ -236,6 +270,7 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
       forkedFromSpanId: target.id,
     });
     expect(child?.spans.some((span) => span.name === "checkpoint-restore")).toBe(true);
+    expect(childAnalyses).toHaveLength(2);
     expect(parentAfter).toEqual(parentBefore);
   });
 });

@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   Clock,
+  Download,
   GitBranch,
   GitCompareArrows,
   Pencil,
   Search,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import type { RunProjection, TraceEvent } from "@/lib/agentscope/domain";
 import type { RunSummary } from "@/lib/agentscope/application/trace-repository";
 import type { AuditResponse } from "@/lib/types";
+import {
+  createRunBundle,
+  parseRunBundle,
+} from "@/lib/agentscope/transfer/run-bundle";
 
 export type RunSelection = {
   projection: RunProjection;
@@ -24,6 +30,7 @@ export type RunSelection = {
 type RunManagerProps = {
   sessions: AuditResponse[];
   currentRunId?: string;
+  currentSelection?: RunSelection;
   onOpenRun: (selection: RunSelection) => void;
   onCompareRuns: (baseline: RunSelection, candidate: RunSelection) => void;
   onClearLocal: () => void;
@@ -82,6 +89,7 @@ async function fetchSelection(
 export function RunManager({
   sessions,
   currentRunId,
+  currentSelection,
   onOpenRun,
   onCompareRuns,
   onClearLocal,
@@ -100,6 +108,7 @@ export function RunManager({
   const [editingRunId, setEditingRunId] = useState<string>();
   const [editName, setEditName] = useState("");
   const [editTags, setEditTags] = useState("");
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   async function refreshPersistentRuns() {
     try {
@@ -227,6 +236,44 @@ export function RunManager({
     }
   }
 
+  function exportCurrentRun() {
+    if (!currentSelection) return;
+    const bundle = createRunBundle(
+      currentSelection.projection,
+      currentSelection.events,
+    );
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(bundle, null, 2)], {
+        type: "application/json",
+      }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `agentscope-run-${bundle.runId}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importBundle(file?: File) {
+    if (!file) return;
+    setError(undefined);
+    try {
+      const bundle = parseRunBundle(JSON.parse(await file.text()));
+      onOpenRun({
+        projection: bundle.projection,
+        events: bundle.events,
+      });
+    } catch (importError) {
+      setError(
+        importError instanceof Error
+          ? `Import failed: ${importError.message}`
+          : "Import failed.",
+      );
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
+
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4" aria-labelledby="run-manager-title">
       <div className="flex items-center justify-between gap-3">
@@ -288,6 +335,31 @@ export function RunManager({
           <GitCompareArrows className="h-3.5 w-3.5" aria-hidden="true" />
           Compare {compareIds.length}/2
         </button>
+        <button
+          type="button"
+          onClick={() => importInputRef.current?.click()}
+          className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-zinc-300 bg-white px-2 text-xs font-semibold text-zinc-700"
+        >
+          <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+          Import JSON
+        </button>
+        <button
+          type="button"
+          disabled={!currentSelection}
+          onClick={exportCurrentRun}
+          className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-zinc-300 bg-white px-2 text-xs font-semibold text-zinc-700 disabled:text-zinc-300"
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          Export Run
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="sr-only"
+          aria-label="Import AgentScope run JSON"
+          onChange={(event) => void importBundle(event.target.files?.[0])}
+        />
       </div>
 
       {error ? <p className="mt-2 text-xs leading-5 text-red-700">{error}</p> : null}

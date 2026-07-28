@@ -422,6 +422,11 @@ export function AuditWorkbench() {
           <RunManager
             sessions={sessions}
             currentRunId={activeProjection?.run.id}
+            currentSelection={activeProjection ? {
+              projection: activeProjection,
+              events: traceEvents,
+              response: result ?? undefined,
+            } : undefined}
             onOpenRun={openManagedRun}
             onCompareRuns={compareManagedRuns}
             onClearLocal={clearHistory}

@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import successfulFixture from "../fixtures/agentscope/successful-code-audit.json";
+import {
+  projectTraceEvents,
+  traceFixtureSchema,
+} from "../lib/agentscope/domain";
+import { createRunBundle } from "../lib/agentscope/transfer/run-bundle";
 
 async function openWorkbench(page: Page) {
   await page.goto("/");
@@ -242,4 +247,36 @@ test("run manager filters history and compares any two selected runs", async ({ 
   await expect(page.getByRole("button", { name: "Run Compare" })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
   await expect(page.getByText(/unmatched/)).toBeVisible();
+});
+
+test("versioned run bundles export and import without executing the agent", async ({ page }) => {
+  let executionRequests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/audit") executionRequests += 1;
+  });
+  await openWorkbench(page);
+  await page.getByRole("button", { name: /Successful trace/ }).click();
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Run" }).click();
+  await expect((await download).suggestedFilename()).toBe(
+    "agentscope-run-run_success_001.json",
+  );
+
+  await page.getByRole("button", { name: "Reset input" }).click();
+  const events = traceFixtureSchema.parse(successfulFixture).events;
+  const bundle = createRunBundle(
+    projectTraceEvents(events),
+    events,
+    "2026-07-28T12:00:00.000Z",
+  );
+  await page.getByLabel("Import AgentScope run JSON").setInputFiles({
+    name: "run.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(bundle)),
+  });
+
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
+  expect(executionRequests).toBe(0);
 });

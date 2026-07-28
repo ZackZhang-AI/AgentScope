@@ -1,19 +1,31 @@
+import { z } from "zod";
 import type { RunProjection } from "../domain/projection";
 import type { JsonValue } from "../domain/common";
 import type { Span } from "../domain/span";
 import { summarizeTokens } from "../presentation/trace-view";
 
-export type Diagnostic = {
-  id: string;
-  ruleId: string;
-  ruleVersion: 1;
-  severity: "info" | "warning" | "error";
-  category: "error" | "retry" | "loop" | "latency" | "token" | "data_quality";
-  title: string;
-  explanation: string;
-  evidenceSpanIds: string[];
-  confidence: number;
-};
+export const diagnosticSchema = z
+  .object({
+    id: z.string().min(1),
+    ruleId: z.string().min(1),
+    ruleVersion: z.literal(1),
+    severity: z.enum(["info", "warning", "error"]),
+    category: z.enum([
+      "error",
+      "retry",
+      "loop",
+      "latency",
+      "token",
+      "data_quality",
+    ]),
+    title: z.string().min(1),
+    explanation: z.string().min(1),
+    evidenceSpanIds: z.array(z.string().min(1)),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict();
+
+export type Diagnostic = z.infer<typeof diagnosticSchema>;
 
 function normalizeJson(value: JsonValue): JsonValue {
   if (Array.isArray(value)) return value.map(normalizeJson);

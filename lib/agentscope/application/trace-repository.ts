@@ -1,4 +1,5 @@
 import type { RunProjection, TraceEvent } from "../domain";
+import type { AnalysisRecord } from "../analysis/analysis-record";
 
 export type AppendTraceResult = {
   inserted: number;
@@ -46,4 +47,6 @@ export interface TraceRepository {
     runId: string,
     input: { name?: string; tags?: string[] },
   ): Promise<RunSummary | null>;
+  saveAnalyses(records: readonly AnalysisRecord[]): Promise<void>;
+  listAnalyses(runId: string): Promise<AnalysisRecord[]>;
 }

@@ -3,13 +3,9 @@ import { runAuditStream } from "@/lib/audit/run-audit";
 import { getOptionalTraceRepository } from "@/lib/agentscope/infrastructure/postgres/database";
 import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
 import { replayForkRequestSchema } from "@/lib/schemas";
-import type { AuditStreamMessage } from "@/lib/types";
+import { createAuditSseResponse } from "@/lib/agentscope/transport/audit-sse-response";
 
 export const runtime = "nodejs";
-
-function sseMessage(message: AuditStreamMessage) {
-  return `event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`;
-}
 
 export async function POST(
   request: Request,
@@ -71,43 +67,16 @@ export async function POST(
     );
   }
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const message of runAuditStream(parsed.data.request, {
-          fork: {
-            parentRunId: runId,
-            forkedFromSpanId: parsed.data.targetSpanId,
-          },
-        })) {
-          if (repository && message.type === "trace_event") {
-            await repository.append(message.event);
-          }
-          controller.enqueue(encoder.encode(sseMessage(message)));
-        }
-      } catch (error) {
-        controller.enqueue(
-          encoder.encode(
-            sseMessage({
-              type: "error",
-              error: error instanceof Error ? error.message : "Unexpected fork failure.",
-            }),
-          ),
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "cache-control": "no-cache, no-transform",
-      connection: "keep-alive",
-      "content-type": "text/event-stream; charset=utf-8",
-      "x-accel-buffering": "no",
+  return createAuditSseResponse(
+    runAuditStream(parsed.data.request, {
+      fork: {
+        parentRunId: runId,
+        forkedFromSpanId: parsed.data.targetSpanId,
+      },
+    }),
+    repository,
+    {
       "x-agentscope-parent-run": runId,
     },
-  });
+  );
 }

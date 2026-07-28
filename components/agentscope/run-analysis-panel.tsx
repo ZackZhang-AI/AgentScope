@@ -74,6 +74,7 @@ export function RunAnalysisPanel({
           }`}
         >
           Eval Report
+          <span className="ml-1 font-mono text-[9px] text-zinc-400">v1</span>
         </button>
       </div>
 
@@ -194,6 +195,9 @@ export function RunAnalysisPanel({
 
           <div>
             <h3 className="text-xs font-semibold text-zinc-900">Limitations and export</h3>
+            <p className="mt-1 font-mono text-[10px] text-zinc-400">
+              schema v{report.reportSchemaVersion} · trace seq {report.inputTraceSequence}
+            </p>
             <ul className="mt-3 grid gap-2 text-[11px] leading-4 text-zinc-500">
               {report.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
             </ul>

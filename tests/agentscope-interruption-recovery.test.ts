@@ -73,6 +73,8 @@ describe("interrupted run recovery", () => {
       ]),
       listRuns: vi.fn(),
       updateRunMetadata: vi.fn(),
+      saveAnalyses: vi.fn(),
+      listAnalyses: vi.fn(),
     };
 
     const result = await recoverInterruptedRuns(repository, {

@@ -1,34 +1,52 @@
+import { z } from "zod";
+import { runStatusSchema } from "../domain";
 import type { RunProjection } from "../domain/projection";
 import { diagnoseRun } from "../diagnostics/diagnose-run";
 import { summarizeTokens } from "../presentation/trace-view";
 
-export type EvalScore = {
-  id: "task_completion" | "tool_reliability" | "loop_efficiency" | "trace_integrity";
-  label: string;
-  score: number;
-  basis: "deterministic_rule";
-  explanation: string;
-  evidenceSpanIds: string[];
-};
+export const evalScoreSchema = z
+  .object({
+    id: z.enum([
+      "task_completion",
+      "tool_reliability",
+      "loop_efficiency",
+      "trace_integrity",
+    ]),
+    label: z.string().min(1),
+    score: z.number().int().min(0).max(100),
+    basis: z.literal("deterministic_rule"),
+    explanation: z.string().min(1),
+    evidenceSpanIds: z.array(z.string().min(1)),
+  })
+  .strict();
 
-export type RunEvalReport = {
-  runId: string;
-  evaluator: "agentscope-deterministic-v1";
-  verdict: "pass" | "warning" | "fail";
-  overallScore: number;
-  measuredFacts: {
-    status: RunProjection["run"]["status"];
-    spanCount: number;
-    errorCount: number;
-    toolCalls: number;
-    successfulToolCalls: number;
-    duplicateToolCalls: number;
-    durationMs: number;
-    totalTokens?: number;
-  };
-  scores: EvalScore[];
-  limitations: string[];
-};
+export const runEvalReportSchema = z
+  .object({
+    reportSchemaVersion: z.literal(1),
+    inputTraceSequence: z.number().int().positive(),
+    runId: z.string().min(1),
+    evaluator: z.literal("agentscope-deterministic-v1"),
+    verdict: z.enum(["pass", "warning", "fail"]),
+    overallScore: z.number().int().min(0).max(100),
+    measuredFacts: z
+      .object({
+        status: runStatusSchema,
+        spanCount: z.number().int().nonnegative(),
+        errorCount: z.number().int().nonnegative(),
+        toolCalls: z.number().int().nonnegative(),
+        successfulToolCalls: z.number().int().nonnegative(),
+        duplicateToolCalls: z.number().int().nonnegative(),
+        durationMs: z.number().int().nonnegative(),
+        totalTokens: z.number().int().nonnegative().optional(),
+      })
+      .strict(),
+    scores: z.array(evalScoreSchema),
+    limitations: z.array(z.string().min(1)),
+  })
+  .strict();
+
+export type EvalScore = z.infer<typeof evalScoreSchema>;
+export type RunEvalReport = z.infer<typeof runEvalReportSchema>;
 
 function duration(projection: RunProjection) {
   const start = projection.run.startedAt ?? projection.run.createdAt;
@@ -105,6 +123,8 @@ export function evaluateRun(projection: RunProjection): RunEvalReport {
   if (toolSpans.length === 0) limitations.push("No tool calls were captured, so tool scores are neutral.");
 
   return {
+    reportSchemaVersion: 1,
+    inputTraceSequence: projection.lastSequence,
     runId: projection.run.id,
     evaluator: "agentscope-deterministic-v1",
     verdict: overallScore >= 85 ? "pass" : overallScore >= 60 ? "warning" : "fail",
@@ -130,6 +150,8 @@ export function evalReportToMarkdown(report: RunEvalReport) {
     `# AgentScope Eval Report`,
     "",
     `Run: ${report.runId}`,
+    `Report schema: v${report.reportSchemaVersion}`,
+    `Input trace sequence: ${report.inputTraceSequence}`,
     `Evaluator: ${report.evaluator}`,
     `Verdict: ${report.verdict}`,
     `Overall score: ${report.overallScore}/100`,
