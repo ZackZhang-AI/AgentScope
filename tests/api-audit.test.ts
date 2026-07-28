@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "../app/api/audit/route";
+import { auditResponseSchema } from "../lib/schemas";
 
 function request(body: unknown) {
   return new Request("http://localhost/api/audit", {
@@ -35,6 +36,12 @@ describe("POST /api/audit", () => {
     expect(response.status).toBe(200);
     expect(json.provider).toBe("mock");
     expect(json.events.length).toBeGreaterThan(0);
+    expect(json.trace.run.id).toBe(json.id);
+    expect(json.trace.run.status).toBe("success_with_warnings");
+    expect(json.trace.spans.some((span: { kind: string }) => span.kind === "model")).toBe(
+      true,
+    );
+    expect(auditResponseSchema.safeParse(json).success).toBe(true);
     expect(json.reportMarkdown).toContain("HarnessLab Audit Report");
   });
 
@@ -52,8 +59,31 @@ describe("POST /api/audit", () => {
 
     expect(response.headers.get("content-type")).toContain("text/event-stream");
     expect(stream).toContain("event: trace");
+    expect(stream).toContain("event: trace_event");
+    expect(stream).toContain('"type":"run.created"');
+    expect(stream).toContain('"type":"span.started"');
     expect(stream).toContain('"status":"running"');
     expect(stream).toContain("event: result");
+  });
+
+  it("closes the structured trace before streaming a provider failure", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", "");
+
+    const response = await POST(
+      streamRequest({
+        content: "const ok = true;",
+        inputType: "files",
+        provider: "deepseek",
+        intensity: "quick",
+      }),
+    );
+    const stream = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(stream).toContain('"type":"span.ended"');
+    expect(stream).toContain('"status":"error"');
+    expect(stream).toContain('"type":"run.ended"');
+    expect(stream).toContain("event: error");
   });
 
   it("returns validation errors for invalid input", async () => {

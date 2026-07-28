@@ -1,0 +1,371 @@
+{
+  "name": "successful-code-audit",
+  "description": "A complete code audit with an explicit plan, one model call, one read-only tool, and a report artifact.",
+  "events": [
+    {
+      "eventId": "evt_success_001",
+      "runId": "run_success_001",
+      "sequence": 1,
+      "occurredAt": "2026-07-28T02:00:00.000Z",
+      "receivedAt": "2026-07-28T02:00:00.001Z",
+      "schemaVersion": 1,
+      "type": "run.created",
+      "payload": {
+        "run": {
+          "id": "run_success_001",
+          "projectId": "project_harnesslab",
+          "name": "Successful security audit",
+          "status": "queued",
+          "taskType": "code_audit",
+          "taskInputHash": "1111111111111111",
+          "configSnapshot": {
+            "provider": "mock",
+            "model": "mock-auditor-v1",
+            "promptVersion": "audit-v2",
+            "modelParameters": { "temperature": 0 },
+            "toolVersions": { "read_file": "1.0.0" }
+          },
+          "environmentFingerprint": {
+            "harnessVersion": "0.3.0",
+            "runtime": "node-22",
+            "sourceRevision": "fixture-success",
+            "fingerprint": "env-success-001"
+          },
+          "createdAt": "2026-07-28T02:00:00.000Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_002",
+      "runId": "run_success_001",
+      "sequence": 2,
+      "occurredAt": "2026-07-28T02:00:00.002Z",
+      "receivedAt": "2026-07-28T02:00:00.003Z",
+      "schemaVersion": 1,
+      "type": "run.started",
+      "payload": { "startedAt": "2026-07-28T02:00:00.002Z" }
+    },
+    {
+      "eventId": "evt_success_003",
+      "runId": "run_success_001",
+      "spanId": "span_success_root",
+      "sequence": 3,
+      "occurredAt": "2026-07-28T02:00:00.010Z",
+      "receivedAt": "2026-07-28T02:00:00.011Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_success_root",
+          "runId": "run_success_001",
+          "kind": "agent",
+          "name": "code-audit-agent",
+          "status": "running",
+          "sequence": 3,
+          "startedAt": "2026-07-28T02:00:00.010Z",
+          "attributes": { "agent.version": "audit-v2" },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_004",
+      "runId": "run_success_001",
+      "spanId": "span_success_plan",
+      "sequence": 4,
+      "occurredAt": "2026-07-28T02:00:00.020Z",
+      "receivedAt": "2026-07-28T02:00:00.021Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_success_plan",
+          "runId": "run_success_001",
+          "parentSpanId": "span_success_root",
+          "kind": "plan",
+          "name": "explicit-review-plan",
+          "status": "running",
+          "sequence": 4,
+          "startedAt": "2026-07-28T02:00:00.020Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "rules": ["security", "testing"] },
+            "redacted": false
+          },
+          "attributes": {},
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_005",
+      "runId": "run_success_001",
+      "spanId": "span_success_plan",
+      "sequence": 5,
+      "occurredAt": "2026-07-28T02:00:00.030Z",
+      "receivedAt": "2026-07-28T02:00:00.031Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T02:00:00.030Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": ["inspect changed files", "validate findings", "write report"],
+          "redacted": false
+        },
+        "metrics": { "durationMs": 10 }
+      }
+    },
+    {
+      "eventId": "evt_success_006",
+      "runId": "run_success_001",
+      "spanId": "span_success_model",
+      "sequence": 6,
+      "occurredAt": "2026-07-28T02:00:00.040Z",
+      "receivedAt": "2026-07-28T02:00:00.041Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_success_model",
+          "runId": "run_success_001",
+          "parentSpanId": "span_success_root",
+          "kind": "model",
+          "name": "inspect-code",
+          "status": "running",
+          "sequence": 6,
+          "startedAt": "2026-07-28T02:00:00.040Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "messages": [{ "role": "user", "content": "Audit the diff." }] },
+            "redacted": false
+          },
+          "attributes": {
+            "gen_ai.provider.name": "mock",
+            "gen_ai.request.model": "mock-auditor-v1"
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_007",
+      "runId": "run_success_001",
+      "spanId": "span_success_model",
+      "sequence": 7,
+      "occurredAt": "2026-07-28T02:00:00.140Z",
+      "receivedAt": "2026-07-28T02:00:00.141Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T02:00:00.140Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": { "toolCall": { "name": "read_file", "arguments": { "path": "app.ts" } } },
+          "redacted": false
+        },
+        "metrics": {
+          "durationMs": 100,
+          "timeToFirstTokenMs": 25,
+          "tokenUsage": { "inputTokens": 120, "outputTokens": 30, "totalTokens": 150 }
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_008",
+      "runId": "run_success_001",
+      "spanId": "span_success_tool",
+      "sequence": 8,
+      "occurredAt": "2026-07-28T02:00:00.150Z",
+      "receivedAt": "2026-07-28T02:00:00.151Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_success_tool",
+          "runId": "run_success_001",
+          "parentSpanId": "span_success_model",
+          "kind": "tool",
+          "name": "read_file",
+          "status": "running",
+          "sequence": 8,
+          "startedAt": "2026-07-28T02:00:00.150Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "path": "app.ts" },
+            "redacted": false
+          },
+          "attributes": {
+            "tool.name": "read_file",
+            "tool.version": "1.0.0",
+            "tool.side_effect": "read_only"
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_009",
+      "runId": "run_success_001",
+      "spanId": "span_success_tool",
+      "sequence": 9,
+      "occurredAt": "2026-07-28T02:00:00.151Z",
+      "receivedAt": "2026-07-28T02:00:00.152Z",
+      "schemaVersion": 1,
+      "type": "checkpoint.created",
+      "payload": {
+        "checkpoint": {
+          "id": "checkpoint_success_tool",
+          "runId": "run_success_001",
+          "spanId": "span_success_tool",
+          "stateRef": "fixture://state/success/tool",
+          "configSnapshot": { "provider": "mock", "promptVersion": "audit-v2" },
+          "toolPolicySnapshot": { "read_file": "read_only" },
+          "completeness": "complete",
+          "blockedReasons": [],
+          "createdAt": "2026-07-28T02:00:00.151Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_010",
+      "runId": "run_success_001",
+      "spanId": "span_success_tool",
+      "sequence": 10,
+      "occurredAt": "2026-07-28T02:00:00.180Z",
+      "receivedAt": "2026-07-28T02:00:00.181Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T02:00:00.180Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": { "lines": 48, "contentHash": "bbbbbbbbbbbbbbbb" },
+          "redacted": false
+        },
+        "metrics": { "durationMs": 30 },
+        "replayability": {
+          "level": "high",
+          "reason": "The tool is read-only and has a complete checkpoint.",
+          "checkpointId": "checkpoint_success_tool"
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_011",
+      "runId": "run_success_001",
+      "spanId": "span_success_final",
+      "sequence": 11,
+      "occurredAt": "2026-07-28T02:00:00.190Z",
+      "receivedAt": "2026-07-28T02:00:00.191Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_success_final",
+          "runId": "run_success_001",
+          "parentSpanId": "span_success_root",
+          "kind": "model",
+          "name": "final-answer",
+          "status": "running",
+          "sequence": 11,
+          "startedAt": "2026-07-28T02:00:00.190Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "toolResultRef": "span_success_tool" },
+            "redacted": false
+          },
+          "attributes": { "gen_ai.provider.name": "mock" },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_012",
+      "runId": "run_success_001",
+      "spanId": "span_success_final",
+      "sequence": 12,
+      "occurredAt": "2026-07-28T02:00:00.270Z",
+      "receivedAt": "2026-07-28T02:00:00.271Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T02:00:00.270Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": { "summary": "No blocking issue found.", "findings": [] },
+          "redacted": false
+        },
+        "metrics": {
+          "durationMs": 80,
+          "tokenUsage": { "inputTokens": 90, "outputTokens": 40, "totalTokens": 130 }
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_013",
+      "runId": "run_success_001",
+      "spanId": "span_success_final",
+      "sequence": 13,
+      "occurredAt": "2026-07-28T02:00:00.275Z",
+      "receivedAt": "2026-07-28T02:00:00.276Z",
+      "schemaVersion": 1,
+      "type": "artifact.created",
+      "payload": {
+        "artifact": {
+          "id": "artifact_success_report",
+          "runId": "run_success_001",
+          "spanId": "span_success_final",
+          "kind": "report",
+          "mediaType": "text/markdown",
+          "storageKey": "fixture://artifacts/success-report.md",
+          "contentHash": "aaaaaaaaaaaaaaaa",
+          "sizeBytes": 256,
+          "redactionState": "redacted",
+          "createdAt": "2026-07-28T02:00:00.275Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_success_014",
+      "runId": "run_success_001",
+      "spanId": "span_success_root",
+      "sequence": 14,
+      "occurredAt": "2026-07-28T02:00:00.280Z",
+      "receivedAt": "2026-07-28T02:00:00.281Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T02:00:00.280Z",
+        "outputRef": {
+          "kind": "artifact",
+          "artifactId": "artifact_success_report",
+          "summary": "Audit report",
+          "redacted": false
+        },
+        "metrics": { "durationMs": 270 }
+      }
+    },
+    {
+      "eventId": "evt_success_015",
+      "runId": "run_success_001",
+      "sequence": 15,
+      "occurredAt": "2026-07-28T02:00:00.290Z",
+      "receivedAt": "2026-07-28T02:00:00.291Z",
+      "schemaVersion": 1,
+      "type": "run.ended",
+      "payload": {
+        "status": "success",
+        "completedAt": "2026-07-28T02:00:00.290Z"
+      }
+    }
+  ]
+}

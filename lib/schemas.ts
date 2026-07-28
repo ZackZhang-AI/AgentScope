@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { runProjectionSchema } from "./agentscope/domain";
 
 export const MAX_CONTENT_LENGTH = 60000;
 export const auditRuleSchema = z.enum([
@@ -100,6 +101,7 @@ export const auditResponseSchema = auditResponsePayloadSchema.extend({
       .optional(),
   }),
   events: z.array(agentEventSchema).min(1),
+  trace: runProjectionSchema,
   evalCard: evalCardSchema,
   reportMarkdown: z.string().min(1),
 });

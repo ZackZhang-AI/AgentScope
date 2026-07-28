@@ -1,0 +1,358 @@
+{
+  "name": "failed-repeated-tool",
+  "description": "A failed audit that invokes the same read-only tool three times with identical arguments and no progress.",
+  "events": [
+    {
+      "eventId": "evt_failure_001",
+      "runId": "run_failure_001",
+      "sequence": 1,
+      "occurredAt": "2026-07-28T03:00:00.000Z",
+      "receivedAt": "2026-07-28T03:00:00.001Z",
+      "schemaVersion": 1,
+      "type": "run.created",
+      "payload": {
+        "run": {
+          "id": "run_failure_001",
+          "projectId": "project_harnesslab",
+          "name": "Repeated failing tool call",
+          "status": "queued",
+          "taskType": "code_audit",
+          "taskInputHash": "2222222222222222",
+          "configSnapshot": {
+            "provider": "mock",
+            "model": "mock-auditor-v1",
+            "promptVersion": "audit-v2",
+            "modelParameters": { "temperature": 0 },
+            "toolVersions": { "search_repository": "1.0.0" }
+          },
+          "environmentFingerprint": {
+            "harnessVersion": "0.3.0",
+            "runtime": "node-22",
+            "sourceRevision": "fixture-failure",
+            "fingerprint": "env-failure-001"
+          },
+          "createdAt": "2026-07-28T03:00:00.000Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_002",
+      "runId": "run_failure_001",
+      "sequence": 2,
+      "occurredAt": "2026-07-28T03:00:00.002Z",
+      "receivedAt": "2026-07-28T03:00:00.003Z",
+      "schemaVersion": 1,
+      "type": "run.started",
+      "payload": { "startedAt": "2026-07-28T03:00:00.002Z" }
+    },
+    {
+      "eventId": "evt_failure_003",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_root",
+      "sequence": 3,
+      "occurredAt": "2026-07-28T03:00:00.010Z",
+      "receivedAt": "2026-07-28T03:00:00.011Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_failure_root",
+          "runId": "run_failure_001",
+          "kind": "agent",
+          "name": "code-audit-agent",
+          "status": "running",
+          "sequence": 3,
+          "startedAt": "2026-07-28T03:00:00.010Z",
+          "attributes": {},
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_004",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_model",
+      "sequence": 4,
+      "occurredAt": "2026-07-28T03:00:00.020Z",
+      "receivedAt": "2026-07-28T03:00:00.021Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_failure_model",
+          "runId": "run_failure_001",
+          "parentSpanId": "span_failure_root",
+          "kind": "model",
+          "name": "choose-inspection-tool",
+          "status": "running",
+          "sequence": 4,
+          "startedAt": "2026-07-28T03:00:00.020Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "messages": [{ "role": "user", "content": "Inspect src/auth.ts." }] },
+            "redacted": false
+          },
+          "attributes": { "gen_ai.provider.name": "mock" },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_005",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_model",
+      "sequence": 5,
+      "occurredAt": "2026-07-28T03:00:00.060Z",
+      "receivedAt": "2026-07-28T03:00:00.061Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T03:00:00.060Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": {
+            "toolCall": {
+              "name": "search_repository",
+              "arguments": { "query": "auth middleware", "path": "missing-src" }
+            }
+          },
+          "redacted": false
+        },
+        "metrics": {
+          "durationMs": 40,
+          "tokenUsage": { "inputTokens": 80, "outputTokens": 20, "totalTokens": 100 }
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_006",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_1",
+      "sequence": 6,
+      "occurredAt": "2026-07-28T03:00:00.070Z",
+      "receivedAt": "2026-07-28T03:00:00.071Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_failure_tool_1",
+          "runId": "run_failure_001",
+          "parentSpanId": "span_failure_root",
+          "kind": "tool",
+          "name": "search_repository",
+          "status": "running",
+          "sequence": 6,
+          "startedAt": "2026-07-28T03:00:00.070Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "query": "auth middleware", "path": "missing-src" },
+            "redacted": false
+          },
+          "attributes": {
+            "tool.name": "search_repository",
+            "tool.version": "1.0.0",
+            "tool.side_effect": "read_only",
+            "retry.index": 0
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_007",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_1",
+      "sequence": 7,
+      "occurredAt": "2026-07-28T03:00:00.071Z",
+      "receivedAt": "2026-07-28T03:00:00.072Z",
+      "schemaVersion": 1,
+      "type": "checkpoint.created",
+      "payload": {
+        "checkpoint": {
+          "id": "checkpoint_failure_tool",
+          "runId": "run_failure_001",
+          "spanId": "span_failure_tool_1",
+          "stateRef": "fixture://state/failure/tool",
+          "configSnapshot": { "provider": "mock", "promptVersion": "audit-v2" },
+          "toolPolicySnapshot": { "search_repository": "read_only" },
+          "completeness": "complete",
+          "blockedReasons": [],
+          "createdAt": "2026-07-28T03:00:00.071Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_008",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_1",
+      "sequence": 8,
+      "occurredAt": "2026-07-28T03:00:00.090Z",
+      "receivedAt": "2026-07-28T03:00:00.091Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "error",
+        "endedAt": "2026-07-28T03:00:00.090Z",
+        "error": {
+          "type": "tool_error",
+          "message": "Search path does not exist.",
+          "code": "PATH_NOT_FOUND",
+          "retryable": true
+        },
+        "metrics": { "durationMs": 20 },
+        "replayability": {
+          "level": "high",
+          "reason": "The failed tool is read-only and has a complete checkpoint.",
+          "checkpointId": "checkpoint_failure_tool"
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_009",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_2",
+      "sequence": 9,
+      "occurredAt": "2026-07-28T03:00:00.100Z",
+      "receivedAt": "2026-07-28T03:00:00.101Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_failure_tool_2",
+          "runId": "run_failure_001",
+          "parentSpanId": "span_failure_root",
+          "kind": "tool",
+          "name": "search_repository",
+          "status": "running",
+          "sequence": 9,
+          "startedAt": "2026-07-28T03:00:00.100Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "query": "auth middleware", "path": "missing-src" },
+            "redacted": false
+          },
+          "attributes": {
+            "tool.name": "search_repository",
+            "tool.version": "1.0.0",
+            "tool.side_effect": "read_only",
+            "retry.index": 1
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_010",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_2",
+      "sequence": 10,
+      "occurredAt": "2026-07-28T03:00:00.120Z",
+      "receivedAt": "2026-07-28T03:00:00.121Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "error",
+        "endedAt": "2026-07-28T03:00:00.120Z",
+        "error": {
+          "type": "tool_error",
+          "message": "Search path does not exist.",
+          "code": "PATH_NOT_FOUND",
+          "retryable": true
+        },
+        "metrics": { "durationMs": 20 }
+      }
+    },
+    {
+      "eventId": "evt_failure_011",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_3",
+      "sequence": 11,
+      "occurredAt": "2026-07-28T03:00:00.130Z",
+      "receivedAt": "2026-07-28T03:00:00.131Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_failure_tool_3",
+          "runId": "run_failure_001",
+          "parentSpanId": "span_failure_root",
+          "kind": "tool",
+          "name": "search_repository",
+          "status": "running",
+          "sequence": 11,
+          "startedAt": "2026-07-28T03:00:00.130Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "query": "auth middleware", "path": "missing-src" },
+            "redacted": false
+          },
+          "attributes": {
+            "tool.name": "search_repository",
+            "tool.version": "1.0.0",
+            "tool.side_effect": "read_only",
+            "retry.index": 2
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_failure_012",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_tool_3",
+      "sequence": 12,
+      "occurredAt": "2026-07-28T03:00:00.150Z",
+      "receivedAt": "2026-07-28T03:00:00.151Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "error",
+        "endedAt": "2026-07-28T03:00:00.150Z",
+        "error": {
+          "type": "tool_error",
+          "message": "Search path does not exist.",
+          "code": "PATH_NOT_FOUND",
+          "retryable": true
+        },
+        "metrics": { "durationMs": 20 }
+      }
+    },
+    {
+      "eventId": "evt_failure_013",
+      "runId": "run_failure_001",
+      "spanId": "span_failure_root",
+      "sequence": 13,
+      "occurredAt": "2026-07-28T03:00:00.160Z",
+      "receivedAt": "2026-07-28T03:00:00.161Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "error",
+        "endedAt": "2026-07-28T03:00:00.160Z",
+        "error": {
+          "type": "tool_error",
+          "message": "The agent exhausted retries without changing the tool input.",
+          "code": "RETRY_EXHAUSTED",
+          "retryable": false
+        },
+        "metrics": { "durationMs": 150 }
+      }
+    },
+    {
+      "eventId": "evt_failure_014",
+      "runId": "run_failure_001",
+      "sequence": 14,
+      "occurredAt": "2026-07-28T03:00:00.170Z",
+      "receivedAt": "2026-07-28T03:00:00.171Z",
+      "schemaVersion": 1,
+      "type": "run.ended",
+      "payload": {
+        "status": "error",
+        "completedAt": "2026-07-28T03:00:00.170Z"
+      }
+    }
+  ]
+}

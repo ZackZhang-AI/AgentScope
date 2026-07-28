@@ -1,3 +1,4 @@
+import { AuditTraceSession } from "../agentscope/instrumentation/audit-trace-session";
 import { parseAuditInput } from "../parser";
 import { runAuditProvider } from "../providers";
 import { generateReportMarkdown } from "../report";
@@ -6,6 +7,7 @@ import type {
   AgentStage,
   AuditRequest,
   AuditStreamMessage,
+  ProviderAuditResult,
 } from "../types";
 import { evaluateAudit } from "./evaluate";
 import { createAgentEvent } from "./events";
@@ -24,7 +26,19 @@ export async function* runAuditStream(
   const input = parseAuditInput(request);
   const events = new Map<AgentStage, AgentEvent>();
   const files = input.files.length ? input.files.join(", ") : "pasted content";
+  const traceSession = new AuditTraceSession({
+    request,
+    parsedInput: input,
+    promptVersion: PROMPT_VERSION,
+    startedAt,
+  });
 
+  for (const event of traceSession.start()) {
+    yield { type: "trace_event", event };
+  }
+  for (const event of traceSession.recordIntake()) {
+    yield { type: "trace_event", event };
+  }
   yield {
     type: "trace",
     event: upsertEvent(
@@ -38,6 +52,9 @@ export async function* runAuditStream(
     ),
   };
 
+  for (const event of traceSession.recordPlan()) {
+    yield { type: "trace_event", event };
+  }
   yield {
     type: "trace",
     event: upsertEvent(
@@ -52,6 +69,7 @@ export async function* runAuditStream(
   };
 
   const inspectionStarted = Date.now();
+  yield { type: "trace_event", event: traceSession.startInspection() };
   yield {
     type: "trace",
     event: upsertEvent(
@@ -64,7 +82,26 @@ export async function* runAuditStream(
     ),
   };
 
-  const providerResult = await runAuditProvider(request);
+  let providerResult: ProviderAuditResult;
+  try {
+    providerResult = await runAuditProvider(request);
+  } catch (error) {
+    for (const event of traceSession.failInspection(
+      error,
+      Date.now() - inspectionStarted,
+    )) {
+      yield { type: "trace_event", event };
+    }
+    throw error;
+  }
+
+  yield {
+    type: "trace_event",
+    event: traceSession.completeInspection(
+      providerResult,
+      Date.now() - inspectionStarted,
+    ),
+  };
   yield {
     type: "trace",
     event: upsertEvent(
@@ -79,8 +116,15 @@ export async function* runAuditStream(
   };
 
   const hasBlockingFinding = providerResult.findings.some(
-    (finding) => finding.severity === "critical" || finding.severity === "high",
+    (finding) =>
+      finding.severity === "critical" || finding.severity === "high",
   );
+  for (const event of traceSession.recordFindings(
+    providerResult.findings.length,
+    hasBlockingFinding,
+  )) {
+    yield { type: "trace_event", event };
+  }
   yield {
     type: "trace",
     event: upsertEvent(
@@ -107,11 +151,15 @@ export async function* runAuditStream(
     evaluationEvents,
     providerResult.findings,
   );
+  for (const event of traceSession.recordEvaluation(evalCard)) {
+    yield { type: "trace_event", event };
+  }
   yield {
     type: "trace",
     event: upsertEvent(events, evaluationEvent),
   };
 
+  yield { type: "trace_event", event: traceSession.startReport() };
   const reportEvent = createAgentEvent(
     "report",
     "complete",
@@ -138,12 +186,19 @@ export async function* runAuditStream(
     metrics,
     rules: request.rules,
   });
+  const completedTrace = traceSession.finishReport(
+    reportMarkdown,
+    hasBlockingFinding,
+  );
+  for (const event of completedTrace.events) {
+    yield { type: "trace_event", event };
+  }
 
   yield { type: "trace", event: reportEvent };
   yield {
     type: "result",
     result: {
-      id: `audit_${input.contentHash}_${Date.now().toString(36)}`,
+      id: traceSession.runId,
       createdAt: completedAt.toISOString(),
       provider: request.provider,
       model: providerResult.model,
@@ -159,6 +214,7 @@ export async function* runAuditStream(
       },
       metrics,
       events: [...events.values()],
+      trace: completedTrace.trace,
       findings: providerResult.findings,
       evalCard,
       reportMarkdown,

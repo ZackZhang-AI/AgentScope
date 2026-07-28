@@ -1,3 +1,8 @@
+import type {
+  RunProjection,
+  TraceEvent,
+} from "./agentscope/domain";
+
 export type InputType = "diff" | "files";
 export type Provider = "mock" | "deepseek" | "minimax";
 export type Intensity = "quick" | "standard";
@@ -90,6 +95,7 @@ export type AuditResponse = {
   inputMeta: AuditInputMeta;
   metrics: AuditMetrics;
   events: AgentEvent[];
+  trace: RunProjection;
   findings: Finding[];
   evalCard: EvalCard;
   reportMarkdown: string;
@@ -121,5 +127,6 @@ export type ProviderAuditResult = Pick<
 
 export type AuditStreamMessage =
   | { type: "trace"; event: AgentEvent }
+  | { type: "trace_event"; event: TraceEvent }
   | { type: "result"; result: AuditResponse }
   | { type: "error"; error: string; event?: AgentEvent };
