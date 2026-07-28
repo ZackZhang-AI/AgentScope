@@ -14,6 +14,9 @@ validation, orchestration, trace events, evaluation, metrics, and exports.
 ## Features
 
 - Real-time SSE trace across six audit stages
+- AgentScope black-box Trace Explorer with replay, diagnostics, branching, and Run comparison
+- PostgreSQL event persistence, sequence-based SSE resumption, and interrupted-run recovery
+- Versioned Run Bundle import/export and deterministic analysis persistence
 - Mock, DeepSeek, and MiniMax providers
 - Security, reliability, testing, maintainability, and performance rules
 - Public GitHub pull request import
@@ -32,6 +35,12 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. Mock Demo requires no API key.
+
+AgentScope documentation:
+
+- [Product requirements](./docs/agentscope-prd.zh-CN.md)
+- [Implementation status](./docs/agentscope-implementation-status.zh-CN.md)
+- [Operations and security](./docs/agentscope-operations.zh-CN.md)
 
 Optional `.env.local` values:
 

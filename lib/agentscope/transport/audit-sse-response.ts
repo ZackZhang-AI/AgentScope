@@ -1,6 +1,7 @@
 import { deriveRunAnalyses } from "../analysis/analysis-record";
 import type { TraceRepository } from "../application/trace-repository";
 import type { AuditStreamMessage } from "../../types";
+import { incrementRuntimeMetric } from "../observability/runtime-metrics";
 
 function sseMessage(message: AuditStreamMessage) {
   const id = message.type === "trace_event"
@@ -13,12 +14,19 @@ async function persistMessage(
   repository: TraceRepository | null,
   message: AuditStreamMessage,
 ) {
-  if (!repository) return;
   if (message.type === "trace_event") {
-    await repository.append(message.event);
+    if (repository) {
+      await repository.append(message.event);
+      incrementRuntimeMetric("trace_events_persisted");
+    }
   } else if (message.type === "result") {
-    await repository.saveAnalyses(
-      deriveRunAnalyses(message.result.trace, message.result.createdAt),
+    if (repository) {
+      await repository.saveAnalyses(
+        deriveRunAnalyses(message.result.trace, message.result.createdAt),
+      );
+    }
+    incrementRuntimeMetric(
+      message.result.trace.run.parentRunId ? "forks_completed" : "runs_completed",
     );
   }
 }
@@ -40,9 +48,11 @@ export function createAuditSseResponse(
             controller.enqueue(encoder.encode(sseMessage(message)));
           } catch {
             clientConnected = false;
+            incrementRuntimeMetric("sse_disconnects");
           }
         }
       } catch (error) {
+        incrementRuntimeMetric("execution_errors");
         if (clientConnected) {
           try {
             controller.enqueue(

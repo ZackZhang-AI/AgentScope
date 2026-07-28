@@ -33,6 +33,7 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   await page.getByRole("button", { name: "Play visual replay" }).click();
   await expect(page.getByText("Diagnostics", { exact: true })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("treeitem").filter({ hasText: "provider-inspection" }).click();
+  await page.getByRole("tab", { name: "Replay" }).click();
   await page.getByRole("button", { name: "Fork from this step" }).click();
   await expect(page.getByRole("dialog", { name: "Replay preflight" })).toBeVisible();
   await expect(page.getByText("Ready to create a child run")).toBeVisible();
@@ -126,6 +127,7 @@ test("offline fixtures cover failure, replay, and comparison without execution r
   await page.getByRole("button", { name: /Repeated tool failure/ }).click();
   await expect(page.getByText("run_failure_001", { exact: true })).toBeVisible();
   await expect(page.getByText("3 duplicate tool calls")).toBeVisible();
+  await page.getByRole("tab", { name: "Replay" }).click();
   await page.getByRole("button", { name: "Fork from this step" }).click();
   await expect(page.getByText("Ready for deterministic Fixture Replay")).toBeVisible();
   await page.getByRole("button", { name: "Replay fixed fixture" }).click();
@@ -164,6 +166,12 @@ test("trace tree filters, keyboard navigation, replay seek, and timeline zoom re
   await modelRow.click();
   await modelRow.press("ArrowRight");
   await expect(treeItems.filter({ hasText: "read_file" })).toHaveAttribute("aria-selected", "true");
+  const overviewTab = page.getByRole("tab", { name: "Overview" });
+  await overviewTab.focus();
+  await overviewTab.press("End");
+  await expect(page.getByRole("tab", { name: "Raw" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Raw" }).press("Home");
+  await expect(overviewTab).toHaveAttribute("aria-selected", "true");
 
   await page.getByRole("button", { name: "Zoom timeline in" }).click();
   await expect(page.getByLabel("Pan timeline viewport")).toBeVisible();

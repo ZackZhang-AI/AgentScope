@@ -4,6 +4,7 @@ import { getOptionalTraceRepository } from "@/lib/agentscope/infrastructure/post
 import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
 import { replayForkRequestSchema } from "@/lib/schemas";
 import { createAuditSseResponse } from "@/lib/agentscope/transport/audit-sse-response";
+import { incrementRuntimeMetric } from "@/lib/agentscope/observability/runtime-metrics";
 
 export const runtime = "nodejs";
 
@@ -52,12 +53,14 @@ export async function POST(
   const target = parent.spans.find((span) => span.id === parsed.data.targetSpanId);
   const preflight = buildReplayPreflight(parent, parsed.data.targetSpanId);
   if (preflight.status === "blocked") {
+    incrementRuntimeMetric("replay_preflight_rejections");
     return Response.json(
       { error: "Replay preflight blocked this fork.", preflight },
       { status: 409 },
     );
   }
   if (!target || target.kind !== "model" || target.name !== "provider-inspection") {
+    incrementRuntimeMetric("replay_preflight_rejections");
     return Response.json(
       {
         error: "This HarnessLab executor currently supports forks from provider-inspection model spans only.",
@@ -67,6 +70,7 @@ export async function POST(
     );
   }
 
+  incrementRuntimeMetric("forks_started");
   return createAuditSseResponse(
     runAuditStream(parsed.data.request, {
       fork: {

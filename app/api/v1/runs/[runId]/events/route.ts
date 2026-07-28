@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getTraceRepository } from "@/lib/agentscope/infrastructure/postgres/database";
 import type { TraceEvent } from "@/lib/agentscope/domain";
+import { incrementRuntimeMetric } from "@/lib/agentscope/observability/runtime-metrics";
 
 const paramsSchema = z.object({
   runId: z.string().min(1).max(200).regex(/^[a-zA-Z0-9:_-]+$/),
@@ -42,6 +43,9 @@ export async function GET(
   }
 
   try {
+    if (parsed.data.after > 0) {
+      incrementRuntimeMetric("sse_resume_requests");
+    }
     const events = await getTraceRepository().listEventsAfter(
       parsed.data.runId,
       parsed.data.after,

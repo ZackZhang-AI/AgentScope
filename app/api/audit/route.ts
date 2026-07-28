@@ -11,6 +11,7 @@ import type { AuditStreamMessage } from "@/lib/types";
 import type { TraceRepository } from "@/lib/agentscope/application/trace-repository";
 import { createAuditSseResponse } from "@/lib/agentscope/transport/audit-sse-response";
 import { deriveRunAnalyses } from "@/lib/agentscope/analysis/analysis-record";
+import { incrementRuntimeMetric } from "@/lib/agentscope/observability/runtime-metrics";
 
 function errorResponse(error: unknown) {
   if (error instanceof ProviderConfigurationError) {
@@ -34,11 +35,15 @@ async function persistTraceMessage(
 ) {
   if (repository && message.type === "trace_event") {
     await repository.append(message.event);
+    incrementRuntimeMetric("trace_events_persisted");
   }
   if (repository && message.type === "result") {
     await repository.saveAnalyses(
       deriveRunAnalyses(message.result.trace, message.result.createdAt),
     );
+  }
+  if (message.type === "result") {
+    incrementRuntimeMetric("runs_completed");
   }
 }
 
@@ -64,6 +69,7 @@ export async function POST(request: Request) {
 
   try {
     const traceRepository = getOptionalTraceRepository();
+    incrementRuntimeMetric("runs_started");
 
     if (request.headers.get("accept") === "text/event-stream") {
       return createAuditSseResponse(
@@ -79,6 +85,7 @@ export async function POST(request: Request) {
 
     throw new Error("Audit stream completed without a result.");
   } catch (error) {
+    incrementRuntimeMetric("execution_errors");
     return errorResponse(error);
   }
 }
