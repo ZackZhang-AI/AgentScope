@@ -24,6 +24,8 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   await expect(page.getByText("No structured trace yet")).toBeVisible();
   await page.getByRole("button", { name: "Next event" }).click();
   await expect(page.getByText(/Event 1\/\d+: run.created/)).toBeVisible();
+  await page.getByRole("button", { name: "Play visual replay" }).click();
+  await expect(page.getByText("Diagnostics", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Risk Score", { exact: true })).toBeVisible();
   const markdownDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Markdown" }).click();

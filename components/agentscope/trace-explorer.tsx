@@ -29,6 +29,8 @@ import {
   getTraceBounds,
 } from "@/lib/agentscope/presentation/trace-view";
 import { SpanInspector } from "./span-inspector";
+import { DiagnosticsPanel } from "./diagnostics-panel";
+import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
 
 type TraceExplorerProps = {
   events: TraceEvent[];
@@ -101,6 +103,10 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
   );
   const selectedSpan = visibleProjection?.spans.find((span) => span.id === selectedSpanId)
     ?? visibleProjection?.spans[0];
+  const diagnostics = useMemo(
+    () => visibleProjection ? diagnoseRun(visibleProjection) : [],
+    [visibleProjection],
+  );
 
   const currentEvent = displayCursor > 0 ? events[displayCursor - 1] : undefined;
   const run = visibleProjection?.run ?? projection?.run;
@@ -203,8 +209,9 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
           </div>
         </div>
       ) : (
-        <div className="grid min-h-[520px] xl:grid-cols-[minmax(510px,1fr)_300px]">
-          <div className="min-w-0 overflow-x-auto">
+        <>
+          <div className="grid min-h-[520px] xl:grid-cols-[minmax(510px,1fr)_300px]">
+            <div className="min-w-0 overflow-x-auto">
             <div className="min-w-[720px]">
               <div className="grid grid-cols-[300px_minmax(340px,1fr)_70px] border-b border-zinc-200 bg-zinc-50 text-[10px] font-medium text-zinc-500">
                 <div className="px-3 py-2">Execution path</div>
@@ -256,14 +263,16 @@ export function TraceExplorer({ events, projection, isRunning }: TraceExplorerPr
                 })}
               </div>
             </div>
-          </div>
+            </div>
 
-          <SpanInspector
-            span={selectedSpan}
-            artifacts={visibleProjection?.artifacts ?? []}
-            checkpoints={visibleProjection?.checkpoints ?? []}
-          />
-        </div>
+            <SpanInspector
+              span={selectedSpan}
+              artifacts={visibleProjection?.artifacts ?? []}
+              checkpoints={visibleProjection?.checkpoints ?? []}
+            />
+          </div>
+          <DiagnosticsPanel diagnostics={diagnostics} onSelectSpan={setSelectedSpanId} />
+        </>
       )}
     </section>
   );
