@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Pool } from "pg";
 import {
@@ -34,11 +34,15 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
   const repository = new PostgresTraceRepository(pool);
 
   beforeAll(async () => {
-    const migration = await readFile(
-      resolve("db/migrations/0001_agentscope_trace.sql"),
-      "utf8",
-    );
-    await pool.query(migration);
+    const migrationDirectory = resolve("db/migrations");
+    const migrations = (await readdir(migrationDirectory))
+      .filter((filename) => /^\d+_.+\.sql$/.test(filename))
+      .sort();
+    for (const migration of migrations) {
+      await pool.query(
+        await readFile(resolve(migrationDirectory, migration), "utf8"),
+      );
+    }
   });
 
   beforeEach(async () => {
@@ -131,6 +135,31 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     expect(
       runs.find((run) => run.id === "run_failure_001")?.errorCount,
     ).toBe(4);
+  });
+
+  it("filters runs and updates mutable display metadata without changing trace facts", async () => {
+    await repository.appendMany(
+      traceFixtureSchema.parse(successfulFixture).events,
+    );
+    const projectionBefore = await repository.getProjection("run_success_001");
+
+    const updated = await repository.updateRunMetadata("run_success_001", {
+      name: "Release audit",
+      tags: ["release", "security"],
+    });
+    const filtered = await repository.listRuns({
+      provider: "mock",
+      query: "Release",
+      sort: "oldest",
+    });
+    const projectionAfter = await repository.getProjection("run_success_001");
+
+    expect(updated).toMatchObject({
+      name: "Release audit",
+      tags: ["release", "security"],
+    });
+    expect(filtered.map((run) => run.id)).toEqual(["run_success_001"]);
+    expect(projectionAfter).toEqual(projectionBefore);
   });
 
   it("persists the real audit API trace when DATABASE_URL is configured", async () => {

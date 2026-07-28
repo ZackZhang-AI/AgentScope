@@ -57,11 +57,11 @@ test("provider switching and session restore remain usable", async ({ page }) =>
   await openWorkbench(page);
 
   await page.getByRole("button", { name: "React auth bug" }).click();
-  await page.getByLabel("Provider").selectOption("deepseek");
+  await page.getByLabel("Provider", { exact: true }).selectOption("deepseek");
   await expect(page.getByText("DeepSeek requires DEEPSEEK_API_KEY on the server.")).toBeVisible();
-  await page.getByLabel("Provider").selectOption("minimax");
+  await page.getByLabel("Provider", { exact: true }).selectOption("minimax");
   await expect(page.getByText("MiniMax requires MINIMAX_API_KEY on the server.")).toBeVisible();
-  await page.getByLabel("Provider").selectOption("mock");
+  await page.getByLabel("Provider", { exact: true }).selectOption("mock");
   await page.getByRole("button", { name: "Run Audit" }).click();
   await expect(
     page.getByRole("heading", { name: "Missing authorization boundary", exact: true }),
@@ -133,11 +133,14 @@ test("offline fixtures cover failure, replay, and comparison without execution r
   await page.getByRole("button", { name: /Fork recovery compare/ }).click();
   await expect(page.getByText("run_fork_001", { exact: true })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
+  await page.getByRole("button", { name: "parent", exact: true }).click();
+  await expect(page.getByText("run_failure_001", { exact: true })).toBeVisible();
 });
 
 test("trace tree filters, keyboard navigation, replay seek, and timeline zoom remain synchronized", async ({ page }) => {
   await openWorkbench(page);
   await page.getByRole("button", { name: /Successful trace/ }).click();
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
 
   const treeItems = page.getByRole("treeitem");
   await expect(treeItems).toHaveCount(5);
@@ -213,4 +216,30 @@ test("an interrupted audit stream resumes from its last persisted sequence", asy
   ).toBeVisible();
   await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
   await expect(page.getByRole("treeitem")).toHaveCount(5);
+});
+
+test("run manager filters history and compares any two selected runs", async ({ page }) => {
+  await openWorkbench(page);
+  await page.getByRole("button", { name: /Successful trace/ }).click();
+  await expect(page.getByText("run_success_001", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Repeated tool failure/ }).click();
+  await expect(page.getByText("run_failure_001", { exact: true })).toBeVisible();
+
+  await page.getByPlaceholder("Filter runs").fill("Repeated tool failure");
+  await expect(
+    page.getByRole("button", { name: /Repeated tool failure exhausted retries/ }),
+  ).toBeVisible();
+  await page.getByPlaceholder("Filter runs").fill("");
+
+  await page
+    .getByRole("button", { name: "Select run_success_001 for compare" })
+    .click();
+  await page
+    .getByRole("button", { name: "Select run_failure_001 for compare" })
+    .click();
+  await page.getByRole("button", { name: "Compare 2/2" }).click();
+
+  await expect(page.getByRole("button", { name: "Run Compare" })).toBeVisible();
+  await expect(page.getByText("Parent vs child facts")).toBeVisible();
+  await expect(page.getByText(/unmatched/)).toBeVisible();
 });

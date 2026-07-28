@@ -17,6 +17,10 @@ describe("AgentScope run comparison", () => {
     expect(comparison.childFacts.errorCount).toBe(0);
     expect(comparison.parentFacts.duplicateToolCalls).toBe(2);
     expect(comparison.path.some((item) => item.status === "removed")).toBe(true);
+    expect(comparison.unmatchedSpanCount).toBeGreaterThan(0);
+    expect(comparison.alignmentConfidence).toBeGreaterThanOrEqual(0);
+    expect(comparison.alignmentConfidence).toBeLessThanOrEqual(1);
+    expect(typeof comparison.finalOutputChanged).toBe("boolean");
     expect(comparison.summary).toContain("Errors changed by -4.");
   });
 });

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import pg from "pg";
 
@@ -7,16 +7,18 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is required to run PostgreSQL migrations.");
 }
 
-const migrationPath = resolve(
-  process.cwd(),
-  "db/migrations/0001_agentscope_trace.sql",
-);
-const sql = await readFile(migrationPath, "utf8");
+const migrationDirectory = resolve(process.cwd(), "db/migrations");
+const migrations = (await readdir(migrationDirectory))
+  .filter((filename) => /^\d+_.+\.sql$/.test(filename))
+  .sort();
 const pool = new pg.Pool({ connectionString, max: 1 });
 
 try {
-  await pool.query(sql);
-  console.log("Applied AgentScope migration 0001_agentscope_trace.");
+  for (const migration of migrations) {
+    const sql = await readFile(resolve(migrationDirectory, migration), "utf8");
+    await pool.query(sql);
+    console.log(`Applied AgentScope migration ${migration}.`);
+  }
 } finally {
   await pool.end();
 }

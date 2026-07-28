@@ -90,6 +90,8 @@ export function RunAnalysisPanel({
               <Fact label="Errors" parent={comparison.parentFacts.errorCount} child={comparison.childFacts.errorCount} />
               <Fact label="Tool calls" parent={comparison.parentFacts.toolCalls} child={comparison.childFacts.toolCalls} />
               <Fact label="Duplicate calls" parent={comparison.parentFacts.duplicateToolCalls} child={comparison.childFacts.duplicateToolCalls} />
+              <Fact label="Final output" parent="baseline" child={comparison.finalOutputChanged ? "changed" : "same"} />
+              <Fact label="Alignment" parent={`${comparison.unmatchedSpanCount} unmatched`} child={`${Math.round(comparison.alignmentConfidence * 100)}%`} />
               {comparison.parentFacts.totalTokens !== undefined && comparison.childFacts.totalTokens !== undefined ? (
                 <Fact label="Reported tokens" parent={comparison.parentFacts.totalTokens} child={comparison.childFacts.totalTokens} />
               ) : null}
@@ -134,6 +136,9 @@ export function RunAnalysisPanel({
                   </span>
                   <span className="truncate text-xs font-medium text-zinc-900">
                     {item.childSpan?.name ?? "No child step"}
+                    <span className="ml-2 font-mono text-[9px] text-zinc-400">
+                      {Math.round(item.confidence * 100)}%
+                    </span>
                   </span>
                 </button>
               ))}

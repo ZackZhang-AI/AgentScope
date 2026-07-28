@@ -10,6 +10,7 @@ export type RunSummary = {
   id: string;
   projectId: string;
   name: string;
+  tags: string[];
   status: RunProjection["run"]["status"];
   taskType: string;
   provider: string;
@@ -26,6 +27,11 @@ export type RunSummary = {
 export type ListRunsInput = {
   projectId?: string;
   status?: RunProjection["run"]["status"];
+  provider?: string;
+  query?: string;
+  createdAfter?: string;
+  createdBefore?: string;
+  sort?: "newest" | "oldest";
   limit?: number;
 };
 
@@ -36,4 +42,8 @@ export interface TraceRepository {
   listEventsAfter(runId: string, sequence: number): Promise<TraceEvent[]>;
   listStaleRunningRunIds(staleBefore: string, limit?: number): Promise<string[]>;
   listRuns(input?: ListRunsInput): Promise<RunSummary[]>;
+  updateRunMetadata(
+    runId: string,
+    input: { name?: string; tags?: string[] },
+  ): Promise<RunSummary | null>;
 }

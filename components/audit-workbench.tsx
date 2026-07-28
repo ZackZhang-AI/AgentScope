@@ -5,9 +5,12 @@ import { AppHeader } from "./app-header";
 import { FindingsPanel } from "./findings-panel";
 import { InputPanel } from "./input-panel";
 import { ReportPreview } from "./report-preview";
-import { SessionHistory } from "./session-history";
 import { TraceExplorer } from "./agentscope/trace-explorer";
 import { DemoRunLibrary } from "./agentscope/demo-run-library";
+import {
+  RunManager,
+  type RunSelection,
+} from "./agentscope/run-manager";
 import { sampleList } from "@/lib/samples";
 import {
   consumeAuditStream,
@@ -15,6 +18,7 @@ import {
 } from "@/lib/client/audit-stream";
 import { clearSessions, loadSessions, saveSession } from "@/lib/storage";
 import type { TraceEvent } from "@/lib/agentscope/domain/event";
+import type { RunProjection } from "@/lib/agentscope/domain/projection";
 import type { DemoRun } from "@/lib/agentscope/fixtures/catalog";
 import type {
   AuditRequest,
@@ -45,7 +49,10 @@ export function AuditWorkbench() {
   const [pullRequestUrl, setPullRequestUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<AuditResponse | null>(null);
-  const [comparisonParent, setComparisonParent] = useState<AuditResponse | null>(null);
+  const [standaloneProjection, setStandaloneProjection] =
+    useState<RunProjection | null>(null);
+  const [comparisonParent, setComparisonParent] =
+    useState<RunProjection | null>(null);
   const [activeDemo, setActiveDemo] = useState<DemoRun | null>(null);
   const [sessions, setSessions] = useState<AuditResponse[]>([]);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
@@ -83,6 +90,7 @@ export function AuditWorkbench() {
     setIsRunning(true);
     setError(null);
     setResult(null);
+    setStandaloneProjection(null);
     setComparisonParent(null);
     setActiveDemo(null);
     setTraceEvents([]);
@@ -125,6 +133,7 @@ export function AuditWorkbench() {
           if (message.type === "result") {
             resultReceived = true;
             setResult(message.result);
+            setStandaloneProjection(null);
             setComparisonParent(null);
             setActiveDemo(null);
             saveSession(message.result);
@@ -165,7 +174,12 @@ export function AuditWorkbench() {
   }
 
   async function forkFromSpan(spanId: string) {
-    if (!result) return false;
+    if (!result) {
+      setError(
+        "This persisted trace does not include the original audit request required for a fork.",
+      );
+      return false;
+    }
 
     setIsForking(true);
     setError(null);
@@ -187,7 +201,8 @@ export function AuditWorkbench() {
 
         setTraceEvents(child.events);
         setResult(child.result);
-        setComparisonParent(parent);
+        setStandaloneProjection(null);
+        setComparisonParent(parent.trace);
         setActiveDemo(child);
         saveSession(parent);
         saveSession(child.result);
@@ -237,7 +252,8 @@ export function AuditWorkbench() {
 
           if (message.type === "result") {
             childResult = message.result;
-            setComparisonParent(parent);
+            setStandaloneProjection(null);
+            setComparisonParent(parent.trace);
             setResult(message.result);
             saveSession(message.result);
             setSessions(loadSessions());
@@ -275,23 +291,6 @@ export function AuditWorkbench() {
     }
   }
 
-  function restoreSession(session: AuditResponse) {
-    setResult(session);
-    setActiveDemo(null);
-    setComparisonParent(
-      session.trace.run.parentRunId
-        ? sessions.find((candidate) => candidate.id === session.trace.run.parentRunId) ?? null
-        : null,
-    );
-    setTraceEvents([]);
-    setProvider(session.provider);
-    setInputType(session.inputMeta.inputType);
-    setIntensity(session.inputMeta.intensity);
-    setRules(session.inputMeta.rules ?? defaultRules);
-    setSource(session.inputMeta.source ?? { kind: "pasted" });
-    setError(null);
-  }
-
   async function importPullRequest() {
     setIsImporting(true);
     setError(null);
@@ -309,6 +308,7 @@ export function AuditWorkbench() {
       setInputType("diff");
       setSource(payload.source);
       setResult(null);
+      setStandaloneProjection(null);
       setComparisonParent(null);
       setActiveDemo(null);
       setTraceEvents([]);
@@ -332,6 +332,7 @@ export function AuditWorkbench() {
     setContent("");
     setSource({ kind: "pasted" });
     setResult(null);
+    setStandaloneProjection(null);
     setComparisonParent(null);
     setActiveDemo(null);
     setTraceEvents([]);
@@ -345,8 +346,9 @@ export function AuditWorkbench() {
 
   function loadDemoRun(run: DemoRun, parent?: DemoRun) {
     setResult(run.result);
+    setStandaloneProjection(null);
     setTraceEvents(run.events);
-    setComparisonParent(parent?.result ?? null);
+    setComparisonParent(parent?.result.trace ?? null);
     setActiveDemo(run);
     setProvider("mock");
     setError(null);
@@ -354,6 +356,38 @@ export function AuditWorkbench() {
     if (parent) saveSession(parent.result);
     setSessions(loadSessions());
   }
+
+  function openManagedRun(selection: RunSelection) {
+    setResult(selection.response ?? null);
+    setStandaloneProjection(selection.response ? null : selection.projection);
+    setTraceEvents(selection.events);
+    setComparisonParent(null);
+    setActiveDemo(null);
+    setError(null);
+    if (selection.response) {
+      setProvider(selection.response.provider);
+      setInputType(selection.response.inputMeta.inputType);
+      setIntensity(selection.response.inputMeta.intensity);
+      setRules(selection.response.inputMeta.rules ?? defaultRules);
+      setSource(selection.response.inputMeta.source ?? { kind: "pasted" });
+    }
+  }
+
+  function compareManagedRuns(
+    baseline: RunSelection,
+    candidate: RunSelection,
+  ) {
+    setComparisonParent(baseline.projection);
+    setResult(candidate.response ?? null);
+    setStandaloneProjection(
+      candidate.response ? null : candidate.projection,
+    );
+    setTraceEvents(candidate.events);
+    setActiveDemo(null);
+    setError(null);
+  }
+
+  const activeProjection = result?.trace ?? standaloneProjection;
 
   return (
     <main
@@ -363,7 +397,7 @@ export function AuditWorkbench() {
     >
       <AppHeader provider={provider} />
       <div className="mx-auto grid max-w-[1800px] gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:p-6">
-        <div className="grid min-w-0 content-start gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
           <InputPanel
             content={content}
             inputType={inputType}
@@ -384,25 +418,31 @@ export function AuditWorkbench() {
             onRun={runAudit}
             onReset={resetInput}
           />
-          <SessionHistory sessions={sessions} onRestore={restoreSession} onClear={clearHistory} />
           <DemoRunLibrary onLoad={loadDemoRun} />
+          <RunManager
+            sessions={sessions}
+            currentRunId={activeProjection?.run.id}
+            onOpenRun={openManagedRun}
+            onCompareRuns={compareManagedRuns}
+            onClearLocal={clearHistory}
+          />
         </div>
 
-        <div className="grid content-start gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-hidden">
           {error ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-900">
               {error}
             </div>
           ) : null}
           <TraceExplorer
-            key={result?.id ?? "active-run"}
+            key={activeProjection?.run.id ?? "active-run"}
             events={traceEvents}
-            projection={result?.trace ?? null}
+            projection={activeProjection}
             isRunning={isRunning}
             provider={provider}
             isForking={isForking}
             onForkSpan={forkFromSpan}
-            parentProjection={comparisonParent?.trace}
+            parentProjection={comparisonParent ?? undefined}
             replayMode={activeDemo ? "fixture" : "fork"}
           />
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">

@@ -6,6 +6,8 @@ import { summarizeTokens } from "../presentation/trace-view";
 export type AlignedSpan = {
   key: string;
   status: "unchanged" | "changed" | "added" | "removed";
+  confidence: number;
+  matchReason: "kind_name_occurrence" | "unmatched";
   parentSpan?: Span;
   childSpan?: Span;
   changes: string[];
@@ -26,6 +28,9 @@ export type RunComparison = {
   childRunId: string;
   sameTaskInput: boolean;
   configurationChanges: string[];
+  alignmentConfidence: number;
+  unmatchedSpanCount: number;
+  finalOutputChanged: boolean;
   path: AlignedSpan[];
   parentFacts: RunFacts;
   childFacts: RunFacts;
@@ -126,12 +131,32 @@ export function compareRuns(
   const path: AlignedSpan[] = keys.map((key) => {
     const parentSpan = parentSpans.get(key);
     const childSpan = childSpans.get(key);
-    if (!parentSpan) return { key, status: "added", childSpan, changes: ["step added"] };
-    if (!childSpan) return { key, status: "removed", parentSpan, changes: ["step removed"] };
+    if (!parentSpan) {
+      return {
+        key,
+        status: "added",
+        confidence: 0,
+        matchReason: "unmatched",
+        childSpan,
+        changes: ["step added"],
+      };
+    }
+    if (!childSpan) {
+      return {
+        key,
+        status: "removed",
+        confidence: 0,
+        matchReason: "unmatched",
+        parentSpan,
+        changes: ["step removed"],
+      };
+    }
     const changes = compareSpan(parentSpan, childSpan);
     return {
       key,
       status: changes.length > 0 ? "changed" : "unchanged",
+      confidence: 1,
+      matchReason: "kind_name_occurrence",
       parentSpan,
       childSpan,
       changes,
@@ -140,11 +165,25 @@ export function compareRuns(
 
   const parentFacts = facts(parent);
   const childFacts = facts(child);
+  const matched = path.filter((item) => item.matchReason !== "unmatched");
+  const unmatchedSpanCount = path.length - matched.length;
+  const alignmentConfidence = path.length === 0
+    ? 1
+    : matched.reduce((sum, item) => sum + item.confidence, 0) / path.length;
+  const parentFinalOutput = [...parent.spans]
+    .sort((left, right) => right.sequence - left.sequence)
+    .find((span) => span.outputRef)?.outputRef;
+  const childFinalOutput = [...child.spans]
+    .sort((left, right) => right.sequence - left.sequence)
+    .find((span) => span.outputRef)?.outputRef;
+  const finalOutputChanged =
+    JSON.stringify(parentFinalOutput) !== JSON.stringify(childFinalOutput);
   const summary = [
     `Run status changed from ${parent.run.status} to ${child.run.status}.`,
     `Errors changed by ${childFacts.errorCount - parentFacts.errorCount}.`,
     `Duration changed by ${childFacts.durationMs - parentFacts.durationMs} ms.`,
     `Duplicate tool calls changed by ${childFacts.duplicateToolCalls - parentFacts.duplicateToolCalls}.`,
+    `Final captured output ${finalOutputChanged ? "changed" : "did not change"}.`,
   ];
   if (parentFacts.totalTokens !== undefined && childFacts.totalTokens !== undefined) {
     summary.push(`Reported tokens changed by ${childFacts.totalTokens - parentFacts.totalTokens}.`);
@@ -155,6 +194,9 @@ export function compareRuns(
     childRunId: child.run.id,
     sameTaskInput: parent.run.taskInputHash === child.run.taskInputHash,
     configurationChanges: configurationChanges(parent, child),
+    alignmentConfidence,
+    unmatchedSpanCount,
+    finalOutputChanged,
     path,
     parentFacts,
     childFacts,

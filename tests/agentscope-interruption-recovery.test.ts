@@ -72,6 +72,7 @@ describe("interrupted run recovery", () => {
         "run_conflict",
       ]),
       listRuns: vi.fn(),
+      updateRunMetadata: vi.fn(),
     };
 
     const result = await recoverInterruptedRuns(repository, {

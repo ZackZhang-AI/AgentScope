@@ -600,6 +600,7 @@ export function TraceExplorer({
           <DiagnosticsPanel diagnostics={diagnostics} onSelectSpan={setSelectedSpanId} />
           {visibleProjection?.run.completedAt ? (
             <RunAnalysisPanel
+              key={`${visibleProjection.run.id}:${parentProjection?.run.id ?? "eval"}`}
               projection={visibleProjection}
               parentProjection={parentProjection}
               onSelectSpan={setSelectedSpanId}

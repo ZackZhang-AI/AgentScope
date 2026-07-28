@@ -5,6 +5,11 @@ import { getTraceRepository } from "@/lib/agentscope/infrastructure/postgres/dat
 const listRunsQuerySchema = z.object({
   projectId: z.string().min(1).max(100).optional(),
   status: runStatusSchema.optional(),
+  provider: z.string().min(1).max(100).optional(),
+  query: z.string().trim().min(1).max(200).optional(),
+  createdAfter: z.iso.datetime().optional(),
+  createdBefore: z.iso.datetime().optional(),
+  sort: z.enum(["newest", "oldest"]).default("newest"),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
@@ -23,6 +28,11 @@ export async function GET(request: Request) {
   const parsed = listRunsQuerySchema.safeParse({
     projectId: url.searchParams.get("projectId") ?? undefined,
     status: url.searchParams.get("status") ?? undefined,
+    provider: url.searchParams.get("provider") ?? undefined,
+    query: url.searchParams.get("query") ?? undefined,
+    createdAfter: url.searchParams.get("createdAfter") ?? undefined,
+    createdBefore: url.searchParams.get("createdBefore") ?? undefined,
+    sort: url.searchParams.get("sort") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
   });
   if (!parsed.success) {

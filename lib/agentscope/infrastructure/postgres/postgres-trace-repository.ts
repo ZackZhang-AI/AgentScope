@@ -26,6 +26,7 @@ type RunSummaryRow = {
   id: string;
   project_id: string;
   name: string;
+  tags: string[];
   status: RunSummary["status"];
   task_type: string;
   provider: string;
@@ -169,23 +170,67 @@ export class PostgresTraceRepository implements TraceRepository {
 
   async listRuns(input: ListRunsInput = {}): Promise<RunSummary[]> {
     const limit = Math.max(1, Math.min(input.limit ?? 50, 100));
+    const order = input.sort === "oldest" ? "ASC" : "DESC";
     const result = await this.pool.query<RunSummaryRow>(
       `SELECT
-         id, project_id, name, status, task_type, provider, model,
+         id, project_id, COALESCE(display_name, name) AS name, tags,
+         status, task_type, provider, model,
          parent_run_id, forked_from_span_id, created_at, started_at, completed_at,
          span_count, error_count
        FROM agentscope_runs
        WHERE ($1::text IS NULL OR project_id = $1)
          AND ($2::text IS NULL OR status = $2)
-       ORDER BY created_at DESC
-       LIMIT $3`,
-      [input.projectId ?? null, input.status ?? null, limit],
+         AND ($3::text IS NULL OR provider = $3)
+         AND (
+           $4::text IS NULL
+           OR id ILIKE '%' || $4 || '%'
+           OR COALESCE(display_name, name) ILIKE '%' || $4 || '%'
+           OR COALESCE(model, '') ILIKE '%' || $4 || '%'
+         )
+         AND ($5::timestamptz IS NULL OR created_at >= $5)
+         AND ($6::timestamptz IS NULL OR created_at <= $6)
+       ORDER BY created_at ${order}
+       LIMIT $7`,
+      [
+        input.projectId ?? null,
+        input.status ?? null,
+        input.provider ?? null,
+        input.query ?? null,
+        input.createdAfter ?? null,
+        input.createdBefore ?? null,
+        limit,
+      ],
     );
 
-    return result.rows.map((row) => ({
+    return result.rows.map((row) => this.#toRunSummary(row));
+  }
+
+  async updateRunMetadata(
+    runId: string,
+    input: { name?: string; tags?: string[] },
+  ): Promise<RunSummary | null> {
+    const result = await this.pool.query<RunSummaryRow>(
+      `UPDATE agentscope_runs
+       SET display_name = COALESCE($2, display_name),
+           tags = COALESCE($3, tags),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING
+         id, project_id, COALESCE(display_name, name) AS name, tags,
+         status, task_type, provider, model,
+         parent_run_id, forked_from_span_id, created_at, started_at, completed_at,
+         span_count, error_count`,
+      [runId, input.name ?? null, input.tags ?? null],
+    );
+    return result.rows[0] ? this.#toRunSummary(result.rows[0]) : null;
+  }
+
+  #toRunSummary(row: RunSummaryRow): RunSummary {
+    return {
       id: row.id,
       projectId: row.project_id,
       name: row.name,
+      tags: row.tags,
       status: row.status,
       taskType: row.task_type,
       provider: row.provider,
@@ -197,7 +242,7 @@ export class PostgresTraceRepository implements TraceRepository {
       completedAt: row.completed_at?.toISOString(),
       spanCount: row.span_count,
       errorCount: row.error_count,
-    }));
+    };
   }
 
   async #ensureRun(client: PoolClient, events: TraceEvent[]) {
