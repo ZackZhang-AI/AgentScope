@@ -13,10 +13,10 @@ export function AppHeader({ provider }: AppHeaderProps) {
         </div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
-            HarnessLab
+            AgentScope
           </h1>
           <p className="max-w-3xl text-sm leading-6 text-zinc-600">
-            Code Agent Audit Workbench for observable traces, structured findings, risk scores, and review exports.
+            HarnessLab Agent black box for trace replay, failure inspection and evaluation.
           </p>
         </div>
       </div>

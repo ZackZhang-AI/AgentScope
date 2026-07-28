@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HarnessLab",
-  description: "Observable code agent audit workbench for pasted diffs and file snippets.",
+  title: "AgentScope by HarnessLab",
+  description: "Replay, inspect and evaluate observable AI agent runs.",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-zinc-100 text-zinc-950 antialiased">{children}</body>

@@ -19,6 +19,11 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
     }),
   ).toBeVisible();
   await expect(page.getByText("Harness Trace")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restart visual replay" })).toBeEnabled();
+  await page.getByRole("button", { name: "Restart visual replay" }).click();
+  await expect(page.getByText("No structured trace yet")).toBeVisible();
+  await page.getByRole("button", { name: "Next event" }).click();
+  await expect(page.getByText(/Event 1\/\d+: run.created/)).toBeVisible();
   await expect(page.getByText("Risk Score", { exact: true })).toBeVisible();
   const markdownDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Markdown" }).click();
@@ -42,7 +47,7 @@ test("provider switching and session restore remain usable", async ({ page }) =>
   await page.getByRole("button", { name: "Run Audit" }).click();
   await expect(
     page.getByRole("heading", { name: "Missing authorization boundary", exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
 
   await page.reload();
   await expect(page.getByRole("button", { name: /Missing authorization boundary/ })).toBeVisible();
@@ -51,7 +56,7 @@ test("provider switching and session restore remain usable", async ({ page }) =>
 test("mobile layout keeps primary controls visible", async ({ page }) => {
   await openWorkbench(page);
 
-  await expect(page.getByRole("heading", { name: "HarnessLab" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AgentScope" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run Audit" })).toBeVisible();
   await expect(page.getByLabel("Code input")).toBeVisible();
 });

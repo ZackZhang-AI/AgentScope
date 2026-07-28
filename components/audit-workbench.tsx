@@ -6,12 +6,12 @@ import { FindingsPanel } from "./findings-panel";
 import { InputPanel } from "./input-panel";
 import { ReportPreview } from "./report-preview";
 import { SessionHistory } from "./session-history";
-import { TraceTimeline } from "./trace-timeline";
+import { TraceExplorer } from "./agentscope/trace-explorer";
 import { sampleList } from "@/lib/samples";
 import { consumeAuditStream } from "@/lib/client/audit-stream";
 import { clearSessions, loadSessions, saveSession } from "@/lib/storage";
+import type { TraceEvent } from "@/lib/agentscope/domain/event";
 import type {
-  AgentEvent,
   AuditRequest,
   AuditResponse,
   AuditRule,
@@ -41,7 +41,7 @@ export function AuditWorkbench() {
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [sessions, setSessions] = useState<AuditResponse[]>([]);
-  const [events, setEvents] = useState<AgentEvent[]>([]);
+  const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -56,7 +56,7 @@ export function AuditWorkbench() {
     setIsRunning(true);
     setError(null);
     setResult(null);
-    setEvents([]);
+    setTraceEvents([]);
 
     try {
       const response = await fetch("/api/audit", {
@@ -82,17 +82,17 @@ export function AuditWorkbench() {
 
       let streamError: string | null = null;
       await consumeAuditStream(response, (message) => {
-        if (message.type === "trace") {
-          setEvents((current) => {
-            const next = new Map(current.map((event) => [event.id, event]));
-            next.set(message.event.id, message.event);
-            return [...next.values()];
+        if (message.type === "trace_event") {
+          setTraceEvents((current) => {
+            if (current.some((event) => event.eventId === message.event.eventId)) {
+              return current;
+            }
+            return [...current, message.event].sort((left, right) => left.sequence - right.sequence);
           });
         }
 
         if (message.type === "result") {
           setResult(message.result);
-          setEvents(message.result.events);
           saveSession(message.result);
           setSessions(loadSessions());
         }
@@ -106,16 +106,6 @@ export function AuditWorkbench() {
     } catch (auditError) {
       const message = auditError instanceof Error ? auditError.message : "Audit request failed.";
       setError(message);
-      setEvents([
-        {
-          id: "inspect",
-          stage: "inspect",
-          status: "error",
-          title: "Audit failed",
-          detail: message,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
     } finally {
       setIsRunning(false);
     }
@@ -123,7 +113,7 @@ export function AuditWorkbench() {
 
   function restoreSession(session: AuditResponse) {
     setResult(session);
-    setEvents(session.events);
+    setTraceEvents([]);
     setProvider(session.provider);
     setInputType(session.inputMeta.inputType);
     setIntensity(session.inputMeta.intensity);
@@ -149,7 +139,7 @@ export function AuditWorkbench() {
       setInputType("diff");
       setSource(payload.source);
       setResult(null);
-      setEvents([]);
+      setTraceEvents([]);
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -170,7 +160,7 @@ export function AuditWorkbench() {
     setContent("");
     setSource({ kind: "pasted" });
     setResult(null);
-    setEvents([]);
+    setTraceEvents([]);
     setError(null);
   }
 
@@ -186,8 +176,8 @@ export function AuditWorkbench() {
       data-hydrated="false"
     >
       <AppHeader provider={provider} />
-      <div className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[360px_minmax(0,1fr)_380px] lg:p-6">
-        <div className="grid content-start gap-4">
+      <div className="mx-auto grid max-w-[1800px] gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:p-6">
+        <div className="grid min-w-0 content-start gap-4">
           <InputPanel
             content={content}
             inputType={inputType}
@@ -217,11 +207,16 @@ export function AuditWorkbench() {
               {error}
             </div>
           ) : null}
-          <TraceTimeline events={events} isRunning={isRunning} />
-          <ReportPreview markdown={result?.reportMarkdown} />
+          <TraceExplorer
+            events={traceEvents}
+            projection={result?.trace ?? null}
+            isRunning={isRunning}
+          />
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <ReportPreview markdown={result?.reportMarkdown} />
+            <FindingsPanel result={result} />
+          </div>
         </div>
-
-        <FindingsPanel result={result} />
       </div>
     </main>
   );
