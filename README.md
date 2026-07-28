@@ -6,6 +6,12 @@ HarnessLab 是一个面向代码审查场景的 AI Agent Harness 工作台。它
 
 一句话来说：HarnessLab 不是普通 AI Chat UI，也不是简单的 DeepSeek 套壳，而是一个面向代码审查任务的 Agent Harness 产品壳。
 
+## 产品预览
+
+![HarnessLab 审计结果工作台](docs/images/readme-audit-result.png)
+
+左侧控制输入和 Provider，中间展示完整 Harness Trace 与报告，右侧集中呈现风险结论、Findings 和 Eval Card。
+
 ## 项目定位
 
 AI 应用正在从“直接调用模型”进入“Harness Engineering”阶段。单次模型回答并不够，真正有工程价值的是：
@@ -35,28 +41,39 @@ HarnessLab 用代码审查这个具体场景，把这些能力做成一个可演
 - 无 API Key 时，Mock Demo 也能完整演示
 - 可部署到 Vercel
 
-## 页面结构
+## 产品流程
 
-```text
-Header: HarnessLab / Provider / GitHub
-Left: 输入控制、样例、Provider、Intensity、Run Audit、历史记录
-Center: Harness Trace Timeline、Report Preview
-Right: Audit Verdict、Findings、Eval Card、Export
+```mermaid
+flowchart LR
+    A[粘贴 Diff / 文件片段] --> B[选择 Provider 与审查强度]
+    B --> C[解析并校验输入]
+    C --> D[生成审查计划]
+    D --> E[执行安全、可靠性与测试检查]
+    E --> F[抽取结构化 Findings]
+    F --> G[评估可复现性、可追踪性与置信度]
+    G --> H[生成风险结论与报告]
+    H --> I[导出 Markdown / JSON<br/>保存本地 Session]
 ```
 
 ## 系统架构
 
-```text
-User Input
-  -> Input Parser
-  -> Audit Request Validator
-  -> Provider Router
-      -> Mock Provider
-      -> DeepSeek Provider
-  -> Response Normalizer
-  -> Report Generator
-  -> API Response
-  -> Trace Timeline / Findings Panel / Export / localStorage
+```mermaid
+flowchart TB
+    UI[Next.js Audit Workbench] --> API[POST /api/audit]
+    API --> Validator[Zod Request Validator]
+    Validator --> Parser[Diff / File Parser]
+    Parser --> Router{Provider Router}
+    Router --> Mock[Deterministic Mock Provider]
+    Router --> DeepSeek[DeepSeek Provider]
+    Mock --> Normalizer[Response Normalizer]
+    DeepSeek --> Normalizer
+    Normalizer --> Report[Report Generator]
+    Report --> Response[Structured Audit Response]
+    Response --> Trace[Trace Timeline]
+    Response --> Findings[Findings + Risk Verdict]
+    Response --> Eval[Eval Card]
+    Response --> Export[Markdown / JSON Export]
+    Response --> Storage[(Browser localStorage)]
 ```
 
 ## 技术栈
