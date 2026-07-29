@@ -1,111 +1,101 @@
-# HarnessLab：代码 Agent 审计工作台
+# AgentScope｜AI Agent 黑匣子回放器
 
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-[English README](./README.en.md) | [架构说明](./docs/architecture.zh-CN.md)
+[English](./README.en.md) · [架构说明](./docs/architecture.zh-CN.md) · [完整 PRD](./docs/agentscope-prd.zh-CN.md)
 
-HarnessLab 是一个面向代码审查场景的 AI Agent Harness 工作台。它把粘贴的
-diff、代码片段或公开 GitHub Pull Request 转换为实时审计轨迹、结构化风险发现、
-确定性质量评分以及可交付的审查报告。
+AgentScope 是 HarnessLab 的 Agent 可观察性扩展：它记录 Agent 的计划、模型决策、工具调用、输入输出、延迟、Token、错误和 Artifact，并把一次失败运行变成可定位、可分支、可比较、可验证的调试闭环。
 
-它不是普通 AI Chat UI，也不是简单的模型套壳。模型负责发现问题，Harness 负责
-输入约束、任务编排、过程观测、结果校验、质量评估和报告导出。
+旗舰案例是一条真实的代码修复 Agent 路径：读取代码、搜索符号、修改文件、运行测试；Parent Run 因错误策略陷入无进展测试循环，用户从安全 Checkpoint 创建 Child Run，应用新策略后通过测试，最后由 Compare 与 Eval 用 Span 证据证明修复有效。
 
-![HarnessLab 桌面端界面](./public/harnesslab-desktop.png)
+![AgentScope 代码修复黑匣子](./public/harnesslab-desktop.png)
+
+## 三种明确的执行模式
+
+| 模式 | 用途 | 是否真实执行工具 | 依赖 |
+| --- | --- | --- | --- |
+| 录制回放 | 90 秒作品集演示、CI | 否，读取确定性运行包 | 无 |
+| 确定性沙箱 | 本地验证完整 Agent 循环 | 是，执行 `read/search/patch/test` | PostgreSQL、Docker |
+| 真实模型沙箱 | 观察 DeepSeek/MiniMax 决策 | 是，工具仍受服务端白名单约束 | PostgreSQL、Docker、API Key |
+
+录制回放不会伪装成真实重执行；沙箱和 Provider 不可用时，`/api/v1/system/capabilities` 会返回稳定原因，UI 仍保留录制入口。
 
 ## 核心能力
 
-- 实时 SSE 审计轨迹：`intake -> plan -> inspect -> finding -> evaluate -> report`
-- 输入支持 unified diff、file snippets 和公开 GitHub PR
-- Provider 支持确定性 Mock、DeepSeek 与 MiniMax
-- 可选择安全、可靠性、测试、可维护性和性能审查规则
-- Zod 约束请求及模型输出，异常 JSON 支持一次提取恢复
-- Harness 独立生成 Eval Card，避免模型自评
-- 记录 Provider、模型、耗时、Prompt 版本和 Token 用量
-- 导出 Markdown 报告、JSON Trace，复制可直接用于 PR 的审查评论
-- 最近审计会话保存在浏览器 localStorage
-- 内置可复现 Mock 评测集，并由 CI 持续验证
-- 无 API Key 时也可通过 Mock Demo 完整演示
+- 通用 `RunExecutor`、结构化 `DecisionProvider`、`ToolRegistry` 与 `WorkspaceSandbox`
+- 固定 `buggy-auth-api` 场景，模型只能选择允许的动作，不能生成任意 Shell
+- Docker 非 root、禁网、只读挂载、CPU/内存/PID/超时限制
+- 不可变 Parent、Checkpoint Snapshot、Copy-on-Write Child Fork
+- Trace Tree、Timeline、可视化回放、Span Inspector 与永久 Run URL
+- Patch Diff Viewer、Test Log Viewer 与 PostgreSQL Artifact 存储
+- Secret 脱敏、单 Artifact 256KB、单 Run 1MB、内部 Snapshot 不进入导出
+- 首次失败、重复调用、Workspace/Test Hash 无变化的 `no_progress_loop` 诊断
+- `Resolved / Regressed / Trade-off` Compare 与代码修复专项确定性 Eval
+- SSE sequence 续传、事件去重、进程中断收敛和幂等创建/Fork
+- 原代码审计工作台继续保留在 `/audit`
 
 ## 快速开始
 
-要求 Node.js 22 或更高版本。
+Node.js 22+：
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000`，选择任意示例并运行 `Mock Demo`。
+打开 `http://localhost:3000`，点击 **Start 90-second demo**。该路径不需要数据库、Docker 或 API Key。
 
-## 模型配置
+启用本地沙箱：
 
-复制 `.env.example` 为 `.env.local`，按需填写：
+```bash
+docker compose up -d
+copy .env.example .env.local
+npm run db:migrate
+npm run dev
+```
+
+`.env.local` 至少需要：
+
+```bash
+DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
+```
+
+真实模型可选配置：
 
 ```bash
 DEEPSEEK_API_KEY=
 DEEPSEEK_MODEL=deepseek-v4-flash
-
 MINIMAX_API_KEY=
 MINIMAX_MODEL=MiniMax-M2.7
-
-# 可选：提高公开 PR 导入时的 GitHub API 限额
-GITHUB_TOKEN=
 ```
 
-所有模型请求均发生在服务端，API Key 不会发送到浏览器。DeepSeek 和 MiniMax
-共用 OpenAI-compatible 适配层，但保留独立的地址、密钥和默认模型配置。
+密钥只在服务端读取，不进入浏览器、Trace、Artifact 或导出 Bundle。
 
-## 工作原理
-
-```mermaid
-flowchart LR
-  A["Diff / Files / GitHub PR"] --> B["Zod Validator"]
-  B --> C["Input Parser"]
-  C --> D["Harness Orchestrator"]
-  D --> E{"Provider Router"}
-  E --> F["Mock"]
-  E --> G["DeepSeek"]
-  E --> H["MiniMax"]
-  F --> I["Structured Findings"]
-  G --> I
-  H --> I
-  I --> J["Deterministic Eval"]
-  J --> K["Report + Trace Export"]
-  D -. "SSE events" .-> L["Trace Timeline"]
-```
-
-模型只返回：
+## 关键接口
 
 ```text
-summary + riskScore + findings
+POST /api/v1/runs
+GET  /api/v1/runs/:runId/stream
+POST /api/v1/runs/:runId/replay-preflight
+POST /api/v1/runs/:runId/forks
+GET  /api/v1/artifacts/:artifactId
+GET  /api/v1/system/capabilities
 ```
 
-时间线、Eval Card、运行指标和报告由 Harness 生成。这一边界让结果更可追溯，
-也让 Mock、DeepSeek、MiniMax 可以在同一评价体系下比较。
-
-## API
-
-`POST /api/audit`
+创建请求：
 
 ```json
 {
-  "content": "diff --git ...",
-  "inputType": "diff",
-  "provider": "mock",
-  "intensity": "standard",
-  "rules": ["security", "reliability", "testing"]
+  "taskType": "code_fix",
+  "scenarioId": "buggy-auth-api",
+  "executionMode": "sandbox",
+  "decisionProvider": "fixture"
 }
 ```
 
-普通请求返回完整 JSON；带 `Accept: text/event-stream` 时会依次返回 `trace`、
-`result` 或 `error` 事件。
-
-`POST /api/github/pr` 只接受形如
-`https://github.com/owner/repo/pull/123` 的公开 PR 地址。服务端仅访问固定的
-GitHub API 域名，并限制导入内容不超过 60,000 字符。
+`recorded` 只允许 `fixture`；测试命令与可修改文件由服务端 Scenario Manifest 固定。
 
 ## 质量验证
 
@@ -119,51 +109,23 @@ npm run e2e
 npm audit --omit=dev
 ```
 
-当前自动化覆盖：
+数据库与真实沙箱验收：
 
-- 请求、响应和内容长度校验
-- diff 与文件片段解析
-- Mock 启发式规则和确定性评测集
-- DeepSeek JSON 提取与错误处理
-- SSE trace 到最终结果的完整链路
-- GitHub PR 地址约束与导入
-- 报告生成、导出、会话恢复及移动端主要流程
-
-## 项目结构
-
-```text
-app/api/               API Route 与 SSE 输出
-components/            工作台交互界面
-lib/audit/             编排、事件与确定性评估
-lib/providers/         Provider 适配层
-lib/evals/             可复现评测数据集
-tests/                 单元与 API 测试
-e2e/                   Playwright 浏览器测试
-docs/                  中文工程说明
+```bash
+$env:TEST_DOCKER_SANDBOX="1"; npm test -- tests/agentscope-workspace-sandbox.test.ts
+$env:TEST_DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; npm run test:postgres
+$env:DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; $env:E2E_SANDBOX="1"; npm run e2e -- e2e/code-fix-demo.spec.ts --project=chromium
 ```
 
-## 求职项目表达
+## 架构边界
 
-> 基于 Harness Engineering 范式设计并实现 HarnessLab 代码 Agent 审计工作台。
-> 项目支持多 Provider 路由、SSE 实时审计轨迹、Zod 结构化输出约束、确定性质量
-> 评估、公开 GitHub PR 导入和可复现评测集，将一次模型调用扩展为可观察、可验证、
-> 可交付的代码审查产品流程。
+当前版本是 Next.js + PostgreSQL 模块化单体。线上作品集默认使用安全录制数据，本地环境开放固定案例沙箱；不接受任意用户仓库，不包含登录/RBAC、团队协作、计费、批量实验、LLM-as-a-Judge、独立 Worker 或多租户生产隔离。
 
-建议重点讲清三个工程决策：
+更多信息：
 
-1. 为什么模型不能给自己的审计过程打分。
-2. 为什么 Provider 输出要和 Harness 事件、报告解耦。
-3. 为什么公开 Demo 必须有稳定、无 Key、可复现的 Mock 路径。
-
-## 范围边界
-
-当前版本聚焦审计工作台，不执行自动改代码、不提交 PR、不接入私有仓库 OAuth，
-也不保存服务端数据库。安全修复建议仍需开发者确认。
-
-## 参与贡献
-
-欢迎通过 Issue 提交样例、审查规则或 Provider 适配建议。提交代码前请确保上述
-质量命令全部通过，并保持一次提交只解决一个明确问题。
+- [实现状态](./docs/agentscope-implementation-status.zh-CN.md)
+- [运行与安全手册](./docs/agentscope-operations.zh-CN.md)
+- [安全策略](./SECURITY.md)
 
 ## License
 

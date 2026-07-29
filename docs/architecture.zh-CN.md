@@ -1,83 +1,109 @@
-# HarnessLab 架构说明
+# AgentScope 架构说明
 
-## 1. 设计目标
+## 1. 架构目标
 
-HarnessLab 的目标不是提供另一个聊天窗口，而是回答代码 Agent 产品中的四个
-工程问题：
+AgentScope 的系统目标不是“展示更多日志”，而是保证四件事同时成立：
 
-1. 输入是否经过约束和标准化？
-2. Agent 执行了哪些阶段，每一步何时发生？
-3. Finding 是否有证据、位置和可执行建议？
-4. 不同 Provider 的结果能否使用同一套标准评估和导出？
+1. Agent 的模型与工具循环能被统一记录；
+2. 失败诊断和 Eval 结论可以回到原始 Span；
+3. Fork 不修改 Parent，且只能从安全 Checkpoint 恢复；
+4. 录制回放、确定性执行和真实模型执行在产品与代码中边界清晰。
 
-## 2. 边界划分
+当前采用 Next.js + PostgreSQL 模块化单体。执行、持久化、分析和 UI 位于同一仓库，但通过领域接口隔离，避免把代码审计专用的 `AuditTraceSession` 扩张成通用 Runtime。
 
-### Provider 层
+## 2. 模块边界
 
-Provider 只负责调用模型并返回 `summary`、`riskScore` 和 `findings`。DeepSeek
-与 MiniMax 共用 `openai-compatible.ts`，各自文件仅维护地址、环境变量和默认
-模型，减少重复逻辑。
-
-### Harness 层
-
-`lib/audit/run-audit.ts` 是核心编排器，负责：
-
-- 解析输入并生成内容哈希
-- 产生六阶段 Trace
-- 调用 Provider 并记录耗时
-- 运行确定性 Eval
-- 生成 Markdown 报告和完整 JSON Trace
-- 通过 Async Generator 向 API 暴露事件
-
-### API 层
-
-`POST /api/audit` 同时支持 JSON 和 SSE。浏览器使用 SSE 持续接收阶段事件；
-测试或其他客户端仍可直接获得普通 JSON。
-
-`POST /api/github/pr` 只解析公开 GitHub PR 地址，再映射到固定 GitHub API
-地址。该限制用于避免服务端任意 URL 请求风险。
-
-### Client 层
-
-客户端只管理输入状态、实时事件合并、结果展示、下载和 localStorage。它不持有
-模型密钥，也不计算审计质量分数。
-
-## 3. Eval Card
-
-Eval Card 衡量审计过程质量，不代表代码本身的绝对质量。当前分数完全由确定性
-规则计算：
-
-- `reproducibility`：Provider 路径和固定 Prompt 版本是否可复现
-- `traceability`：阶段完成度、Finding 证据和位置覆盖
-- `testability`：建议是否具体以及测试规则是否得到响应
-- `confidence`：结构化完整度、审查强度和 Provider 类型
-- `score`：以上指标的算术平均值
-
-这套规则可以版本化、测试和解释，模型无法直接修改自己的分数。
-
-## 4. 流式协议
-
-SSE 事件共有三种：
-
-```text
-trace  -> 单个 AgentEvent，可按 id 更新现有阶段
-result -> 完整 AuditResponse，审计成功结束
-error  -> 结构化错误信息
+```mermaid
+flowchart LR
+  UI["Workbench / Run Detail"] --> API["Versioned REST + SSE"]
+  API --> EX["RunExecutor"]
+  EX --> DP["DecisionProvider"]
+  EX --> TR["ToolRegistry"]
+  TR --> WS["WorkspaceSandbox"]
+  WS --> DK["Docker Test Runner"]
+  EX --> AS["ArtifactStore"]
+  EX --> EV["Append-only Trace Events"]
+  EV --> PG["PostgreSQL"]
+  AS --> PG
+  EV --> AN["Diagnostics / Compare / Eval"]
+  AN --> UI
 ```
 
-每个事件包含稳定阶段 ID、状态、时间戳，并可记录 artifact 与 duration。
+### Execution Domain
 
-## 5. 安全边界
+- `RunExecutor.execute(spec)` 驱动 Agent 循环并输出统一 `RunStreamMessage`。
+- `DecisionProvider.next(context)` 只能返回 Zod 校验后的结构化动作。
+- `ToolRegistry` 只注册 `read_file`、`search_code`、`apply_patch`、`run_tests`。
+- `WorkspaceSandbox` 负责工作区隔离、路径校验、Patch 白名单和 Snapshot。
+- `ArtifactStore` 负责内容限制、脱敏、Hash、可见性与持久化。
 
-- API Key 仅从服务端环境变量读取
-- 输入最大 60,000 字符
-- 模型输出通过 Zod 校验
-- GitHub 导入仅允许 `https://github.com/{owner}/{repo}/pull/{number}`
-- 报告是建议，不自动执行代码修改或合并操作
-- localStorage 仅存审计结果，不存 API Key
+`fixture`、`deepseek`、`minimax` 共享同一执行器。Provider 不能覆盖测试命令，也不能生成任意 Shell。
 
-## 6. 扩展方向
+### Trace Domain
 
-新增 Provider 时，应只实现 `ProviderAuditResult`，不要在 Provider 中生成 Trace
-或 Eval。新增审查规则时，需要同步更新 Prompt、Mock 规则、评测用例和 UI 选项。
-若未来接入私有仓库，应使用 GitHub App 或 OAuth，并将权限范围控制在只读。
+`Run / Span / Event / Artifact / Checkpoint` 是稳定领域模型。事件采用追加写，Projection 可由事件重建；旧 Bundle Schema 与旧审计 Trace 保持兼容。
+
+### Analysis Domain
+
+- Diagnostics：首次未恢复失败、重复调用、无进展循环、延迟和 Token 热点。
+- Compare：对齐路径并输出事实型 `Resolved / Regressed / Trade-off`。
+- Eval：依据运行终态、目标测试、Patch、范围、安全和工具可靠性打分。
+
+分析结果只引用 `evidenceSpanIds`，不依赖隐藏推理或模型自评。
+
+## 3. 代码修复场景
+
+本轮只支持仓库内置 `buggy-auth-api`：
+
+- Fixture 文件由 Scenario Manifest 声明；
+- 可修改文件只有 `src/auth.ts`；
+- 测试命令由服务端固定；
+- 每个 Run 使用独立临时目录；
+- Checkpoint 保存 Fixture 版本、累计 Patch、工具版本和 Workspace Snapshot 引用；
+- Child 通过 Snapshot 恢复，Parent 的事件、投影和工作区保持不变。
+
+Docker 运行测试时采用非 root 用户、关闭网络、只读工作区挂载、临时 `/tmp`、CPU/内存/PID 与超时限制。
+
+## 4. Artifact 与安全
+
+支持 `text/plain`、`application/json`、`text/x-diff`：
+
+- 单 Artifact 最大 256KB；
+- 单 Run 最大 1MB；
+- 持久化前执行 Secret 脱敏；
+- 用户 Artifact 可由内容接口读取；
+- Workspace Snapshot 标记为 internal，默认不进入导出 Bundle。
+
+Trace 保存 Artifact 元数据与 Hash，不把大内容直接塞入 Span。
+
+## 5. API 与可靠性
+
+关键接口：
+
+```text
+POST /api/v1/runs
+GET  /api/v1/runs/:runId/stream
+POST /api/v1/runs/:runId/replay-preflight
+POST /api/v1/runs/:runId/forks
+GET  /api/v1/artifacts/:artifactId
+GET  /api/v1/system/capabilities
+```
+
+Run 与 Fork 支持 `Idempotency-Key`。SSE 事件带稳定 sequence，客户端按事件 ID 去重，并可在刷新或断线后从 PostgreSQL 补拉。进程中断的运行会被收敛为明确错误终态。
+
+## 6. 产品路由
+
+- `/`：旗舰入口与能力检测；
+- `/demos/code-fix-loop`：固定录制演示；
+- `/runs/:runId`：持久 Run 深链接；
+- `/audit`：原代码审计工作台。
+
+共享服务端事实以 Run Projection 为准，前端不引入新的全局状态库。
+
+## 7. 明确非目标
+
+- 任意用户仓库或不可信代码执行；
+- 登录、RBAC、多租户、计费和团队协作；
+- 独立 Worker、消息队列和分布式调度；
+- Dataset、批量实验、趋势看板和 LLM-as-a-Judge；
+- TypeScript/Python SDK 与 OTLP 导入。

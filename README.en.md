@@ -1,56 +1,63 @@
-# HarnessLab
+# AgentScope — AI Agent Black Box
 
-[中文说明](./README.md) | [Architecture (Chinese)](./docs/architecture.zh-CN.md)
+[中文](./README.md) · [Architecture (Chinese)](./docs/architecture.zh-CN.md) · [PRD (Chinese)](./docs/agentscope-prd.zh-CN.md)
 
-HarnessLab is a Code Agent Audit Workbench that turns diffs, file snippets, and
-public GitHub pull requests into observable audit traces, structured findings,
-deterministic process-quality scores, and review-ready reports.
+AgentScope extends HarnessLab with evidence-backed Agent observability. It captures plans, model decisions, tool calls, inputs, outputs, latency, tokens, errors, and artifacts, then turns a failed run into a debuggable and verifiable branch.
 
-It is not a generic chat wrapper. Models produce findings; the Harness owns
-validation, orchestration, trace events, evaluation, metrics, and exports.
+The flagship story follows a code-repair Agent that reads source, searches symbols, applies a patch, and runs tests. The immutable parent repeats a failing test without workspace progress. A child is restored from a safe checkpoint, applies a corrected strategy, passes the target tests, and is compared with its parent through span-linked diagnostics and deterministic evaluation.
 
-![HarnessLab desktop workbench](./public/harnesslab-desktop.png)
+![AgentScope code-fix black box](./public/harnesslab-desktop.png)
 
-## Features
+## Execution modes
 
-- Real-time SSE trace across six audit stages
-- AgentScope black-box Trace Explorer with replay, diagnostics, branching, and Run comparison
-- PostgreSQL event persistence, sequence-based SSE resumption, and interrupted-run recovery
-- Versioned Run Bundle import/export and deterministic analysis persistence
-- Mock, DeepSeek, and MiniMax providers
-- Security, reliability, testing, maintainability, and performance rules
-- Public GitHub pull request import
-- Server-side Zod validation and model JSON recovery
-- Provider latency, token usage, and prompt-version metrics
-- Deterministic Eval Card generated outside the model
-- Markdown, JSON, and pull-request comment exports
-- Versioned browser localStorage session history
-- Reproducible mock evaluation suite enforced by CI
+| Mode | Tool execution | Requirements |
+| --- | --- | --- |
+| Recorded replay | No; deterministic run bundle | None |
+| Deterministic sandbox | Real `read/search/patch/test` tools | PostgreSQL and Docker |
+| Live-model sandbox | Real allowlisted tools; model selects structured actions | PostgreSQL, Docker, API key |
 
-## Local Development
+The UI labels these modes explicitly. A missing database, Docker daemon, or provider key never blocks the recorded demo.
+
+## Highlights
+
+- Generic `RunExecutor`, validated `DecisionProvider`, `ToolRegistry`, and isolated workspace boundary
+- Fixed `buggy-auth-api` scenario with server-owned commands and patch allowlists
+- Non-root, network-disabled Docker test runner with CPU, memory, PID, and timeout limits
+- Immutable parent runs, checkpoint snapshots, and copy-on-write child forks
+- Trace tree, timeline, replay controls, span inspector, and permanent run URLs
+- Diff and log artifact viewers with PostgreSQL persistence and secret redaction
+- No-progress loop detection using normalized calls plus workspace and test-result hashes
+- Evidence-linked `Resolved / Regressed / Trade-off` comparison and code-fix evaluation
+- Sequence-based SSE recovery and idempotent run/fork creation
+- Legacy code-audit workbench retained at `/audit`
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Mock Demo requires no API key.
+Open `http://localhost:3000` and select **Start 90-second demo**. No key or infrastructure is required.
 
-AgentScope documentation:
-
-- [Product requirements](./docs/agentscope-prd.zh-CN.md)
-- [Implementation status](./docs/agentscope-implementation-status.zh-CN.md)
-- [Operations and security](./docs/agentscope-operations.zh-CN.md)
-
-Optional `.env.local` values:
+For local sandbox execution:
 
 ```bash
-DEEPSEEK_API_KEY=
-DEEPSEEK_MODEL=deepseek-v4-flash
-MINIMAX_API_KEY=
-MINIMAX_MODEL=MiniMax-M2.7
-GITHUB_TOKEN=
+docker compose up -d
+# Copy .env.example to .env.local
+npm run db:migrate
+npm run dev
 ```
+
+Set:
+
+```bash
+DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
+DEEPSEEK_API_KEY=
+MINIMAX_API_KEY=
+```
+
+Provider secrets are server-only and are excluded from traces, artifacts, and exported bundles.
 
 ## Verification
 
@@ -61,7 +68,14 @@ npm test
 npm run eval
 npm run build
 npm run e2e
+npm audit --omit=dev
 ```
+
+For the PostgreSQL integration suite, set `TEST_DATABASE_URL` explicitly before
+running `npm run test:postgres`. Docker sandbox tests require
+`TEST_DOCKER_SANDBOX=1`.
+
+AgentScope is intentionally a modular monolith and a portfolio-grade fixed-scenario sandbox. It does not execute arbitrary user repositories and does not claim multi-tenant production isolation.
 
 ## License
 

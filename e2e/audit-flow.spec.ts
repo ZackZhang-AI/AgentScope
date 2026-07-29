@@ -140,7 +140,13 @@ test("offline fixtures cover failure, replay, and comparison without execution r
   await page.getByRole("button", { name: /Fork recovery compare/ }).click();
   await expect(page.getByText("run_fork_001", { exact: true })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
-  await page.getByRole("button", { name: "parent", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "parent",
+      exact: true,
+      description: "run_failure_001",
+    })
+    .click();
   await expect(page.getByText("run_failure_001", { exact: true })).toBeVisible();
 });
 

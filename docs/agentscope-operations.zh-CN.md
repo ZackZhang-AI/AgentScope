@@ -1,85 +1,112 @@
 # AgentScope 运行与安全手册
 
-## 1. 部署形态
+## 1. 运行形态
 
-当前版本是模块化单体：
+AgentScope v0.3.0 是模块化单体：
 
-- Next.js 提供工作台、REST API 与 SSE；
-- PostgreSQL 保存不可变 Trace、Run 元数据和版本化派生分析；
-- Docker Compose 仅用于本地 PostgreSQL；
-- Mock Demo 不需要数据库、网络或模型密钥。
+- Next.js 提供工作台、REST API、SSE 与执行编排；
+- PostgreSQL 保存不可变 Trace、Run 元数据、分析和 Artifact；
+- Docker 仅在本地沙箱测试阶段运行固定 Scenario；
+- Recorded Demo 不需要数据库、Docker、网络或模型密钥。
 
-生产部署前执行：
+线上作品集建议只开放 Recorded Demo；本地开发环境才开放 Sandbox。
 
-```bash
-npm ci
-npm run db:migrate
-npm run build
-npm run typecheck
-npm run lint
-npm test
-npm run e2e
-npm audit --omit=dev
-```
-
-2026-07-28 发布验收时，生产依赖审计结果为 0 个漏洞。完整开发依赖审计仍会报告 ESLint 9 间接依赖的 `brace-expansion` 高危拒绝服务漏洞；官方修复只发布在 5.x，而 ESLint 9 依赖 1.x。当前项目不把外部输入传给 ESLint/glob，且这些包不进入生产运行时，因此不使用跨主版本 override。升级 ESLint 工具链后应重新执行完整审计。
-
-## 2. 必要配置
+## 2. 配置
 
 ```bash
-DATABASE_URL=postgresql://user:password@host:5432/agentscope
+DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
 AGENTSCOPE_INTERRUPTED_AFTER_MS=300000
+DEEPSEEK_API_KEY=
+MINIMAX_API_KEY=
 ```
 
-`DATABASE_URL` 未配置时，实时运行和离线 Fixture 仍可使用，但持久化历史、断线补拉、分析存储和 Run 元数据编辑不可用。
+启动本地依赖：
 
-## 3. 数据安全边界
+```bash
+docker compose up -d
+npm run db:migrate
+npm run dev
+```
 
-- Provider 密钥只从服务端环境变量读取，不进入浏览器、Trace 或导出 Bundle。
-- 源代码正文默认不写入 AgentScope Trace；Trace 保存标准化哈希、文件名和结构化摘要。
-- Payload 使用 `inline`、`artifact`、`omitted` 三种显式引用，省略内容必须给出原因。
-- Replay Preflight 默认阻止 `destructive`、未知副作用或不完整 Checkpoint。
-- 导入 Bundle 通过严格 Schema 校验；存在原始事件时，系统重新投影并拒绝被单独篡改的 Projection。
-- PostgreSQL 行为是单项目本地开发基线。公网或多租户部署必须在反向代理/平台层增加身份认证、Project 级授权和 TLS；当前仓库不声称已提供多租户隔离。
+能力状态通过 `GET /api/v1/system/capabilities` 查询。缺少依赖时接口给出原因，客户端应禁用对应执行入口，而不是隐藏 Recorded Demo。
 
-## 4. 可靠性
+## 3. 沙箱安全基线
 
-- SSE 的结构化 Trace 事件包含 `id: sequence`。
-- 客户端以最后序号调用 `/api/v1/runs/:runId/events?after=` 补拉并按 `eventId` 去重。
-- 浏览器断开后，服务端继续执行并持久化事件。
-- Next.js 进程启动时扫描陈旧 `running` Run，将未闭合 Span 以 `runner_interrupted` 收敛为错误终态。
-- `AGENTSCOPE_INTERRUPTED_AFTER_MS` 最小为 30 秒，默认 5 分钟。
+- 只允许 Scenario Manifest 中的 `buggy-auth-api`。
+- 每个 Run 创建独立临时工作区。
+- 所有路径先解析并验证仍位于工作区内。
+- Patch 只能修改 Manifest 允许的文件，且必须精确匹配锚点。
+- 模型和客户端都不能提供测试命令。
+- 测试容器使用非 root 用户、`--network none`、只读挂载、临时目录以及 CPU、内存、PID、超时限制。
+- Docker 不可用时不回退到宿主机 Shell。
+- Replay Preflight 拒绝危险副作用、不完整 Checkpoint 和越权操作。
 
-## 5. 迁移与数据保留
+本实现降低固定案例的风险，但不构成任意不可信代码的生产级隔离。
 
-`npm run db:migrate` 会按文件名顺序幂等执行 `db/migrations/*.sql`。当前表：
+## 4. Artifact 与数据安全
+
+- Provider 密钥仅从服务端环境变量读取。
+- Artifact 写入前执行 Secret 脱敏。
+- 单 Artifact 最大 256KB，单 Run 最大 1MB。
+- 用户可见内容仅支持 `text/plain`、`application/json`、`text/x-diff`。
+- Workspace Snapshot 为 internal，不进入默认 Bundle。
+- Trace 引用 Artifact ID、Hash、大小与脱敏状态，不复制完整内容。
+
+公网部署仍必须补充身份认证、授权、TLS、速率限制和组织级数据保留策略。
+
+## 5. 可靠性
+
+- Run/Fork 接受 `Idempotency-Key`。
+- SSE 事件包含稳定 `runId` 与单调 sequence。
+- 客户端按 `eventId` 去重；刷新后通过 Run/Event 接口恢复 Projection。
+- `/api/v1/runs/:runId/stream` 支持持久 Run 的轮询式 SSE 续传。
+- 陈旧 `running` Run 在启动恢复阶段收敛为 `runner_interrupted`。
+- Parent/Child 使用数据库关系约束，Fork 不覆盖 Parent。
+
+## 6. 数据库迁移
+
+```bash
+npm run db:migrate
+```
+
+当前表：
 
 - `agentscope_runs`
 - `agentscope_trace_events`
 - `agentscope_analyses`
+- `agentscope_artifacts`
 
-当前版本不提供 UI 物理删除。生产环境应由运维任务按组织策略归档或删除，并在删除前导出 AgentScope Run Bundle。Parent/Child Run 使用限制删除关系，避免留下无父分支。
+迁移按 `db/migrations/*.sql` 文件名顺序幂等执行。
 
-## 6. 自观测
+## 7. 发布检查
 
-`GET /api/v1/system/metrics` 返回进程级 JSON 计数器：
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run eval
+npm run build
+npm run e2e
+npm audit --omit=dev
+```
 
-- Run/Fork 启动与完成；
-- Trace 事件持久化；
-- 执行错误；
-- SSE 断开与补拉；
-- Replay Preflight 拒绝。
+数据库与 Docker：
 
-这些计数器不包含输入输出、密钥或个人信息。它们随进程重启清零，多实例生产环境应由日志/指标采集器聚合。
+```bash
+docker compose up -d
+npm run db:migrate
+$env:TEST_DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; npm run test:postgres
+$env:TEST_DOCKER_SANDBOX="1"; npm test -- tests/agentscope-workspace-sandbox.test.ts
+$env:DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; $env:E2E_SANDBOX="1"; npm run e2e -- e2e/code-fix-demo.spec.ts --project=chromium
+docker compose down
+```
 
-## 7. 导入导出协议
+发布前还应人工确认：
 
-AgentScope Run Bundle：
-
-- `kind = agentscope.run.bundle`
-- `bundleVersion = 1`
-- 包含 Projection、可用时的不可变事件、版本化诊断与 Eval；
-- `source = projection_snapshot` 表示原始事件不可用；
-- Eval 报告包含 `reportSchemaVersion` 和 `inputTraceSequence`。
-
-导入只用于分析和视觉回放，不会自动执行模型、工具或 Fork。
+- 首页明确标注三种执行模式；
+- 永久 Demo URL 刷新后可恢复；
+- Parent 失败、Child 成功、Artifact 可读；
+- Compare 与 Eval 结论能跳转到证据 Span；
+- 移动端主控件可见；
+- 未配置 Key、数据库或 Docker 时降级文案正确。

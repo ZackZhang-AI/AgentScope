@@ -162,8 +162,14 @@ export function CodeFixWorkbench({
 
   async function consumeExecution(response: Response) {
     if (!response.ok) {
-      const payload = await response.json();
-      throw new Error(payload.error ?? "Agent execution failed.");
+      const payload = response.headers
+        .get("content-type")
+        ?.includes("application/json")
+        ? await response.json() as { error?: string }
+        : undefined;
+      throw new Error(
+        payload?.error ?? `Agent execution failed (HTTP ${response.status}).`,
+      );
     }
     let result: CodeFixRunResult | undefined;
     await consumeRunStream(response, (message) => {

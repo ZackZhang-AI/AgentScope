@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+test.describe.configure({ mode: "serial" });
+
 test("recorded code-fix story reaches an evidence-backed verified child", async ({
   page,
 }) => {
@@ -72,4 +74,44 @@ test("recorded demo restores from its permanent URL on mobile", async ({
   await expect(page.getByText("Failure", { exact: true })).toBeVisible();
   await expect(page.getByText("Root cause", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Artifacts" })).toBeVisible();
+});
+
+test("local sandbox executes tools, forks a child, and restores its run URL", async ({
+  page,
+}) => {
+  test.skip(
+    process.env.E2E_SANDBOX !== "1",
+    "Set E2E_SANDBOX=1 with PostgreSQL and Docker to run the real sandbox flow.",
+  );
+
+  await page.goto("/");
+  await expect(page.locator("main[data-hydrated='true']")).toBeVisible();
+  const runButton = page.getByRole("button", { name: "Run sandbox agent" });
+  await expect(runButton).toBeEnabled({ timeout: 20_000 });
+  await runButton.click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Root cause: repeated tests produced no workspace progress",
+    }),
+  ).toBeVisible({ timeout: 45_000 });
+  await page.getByRole("button", { name: /No-progress tool loop/ }).click();
+  await page.getByRole("tab", { name: "Replay" }).click();
+  await page.getByRole("button", { name: "Fork from this step" }).click();
+  await expect(page.getByText("Ready to create a child run")).toBeVisible();
+  await page.getByRole("button", { name: "Create child run" }).click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Verified fix: the child test passed",
+    }),
+  ).toBeVisible({ timeout: 45_000 });
+  await expect(page).toHaveURL(/\/runs\/codefix_/);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", {
+      name: "Verified fix: the child test passed",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Parent vs child facts")).toBeVisible();
 });
