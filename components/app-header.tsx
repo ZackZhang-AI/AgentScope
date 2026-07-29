@@ -1,4 +1,5 @@
 import { Code2, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 type AppHeaderProps = {
   provider: string;
@@ -7,7 +8,7 @@ type AppHeaderProps = {
 export function AppHeader({ provider }: AppHeaderProps) {
   return (
     <header className="flex flex-col gap-4 border-b border-zinc-200 bg-white px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex items-start gap-3">
+      <Link href="/" className="flex items-start gap-3 rounded-md">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
           <ShieldCheck className="h-5 w-5" aria-hidden="true" />
         </div>
@@ -19,7 +20,7 @@ export function AppHeader({ provider }: AppHeaderProps) {
             HarnessLab Agent black box for trace replay, failure inspection and evaluation.
           </p>
         </div>
-      </div>
+      </Link>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-700">
           Provider: <span className="font-medium capitalize text-zinc-950">{provider}</span>

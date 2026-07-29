@@ -103,6 +103,37 @@ export function RunAnalysisPanel({
                 {comparison.summary.map((item) => <li key={item}>{item}</li>)}
               </ul>
             </div>
+            {projection.run.taskType === "code_fix" ? (
+              <div className="mt-4 grid gap-3">
+                {[
+                  {
+                    label: "Resolved",
+                    items: comparison.outcomes.resolved,
+                    style: "border-emerald-200 bg-emerald-50 text-emerald-900",
+                  },
+                  {
+                    label: "Regressed",
+                    items: comparison.outcomes.regressed,
+                    style: "border-red-200 bg-red-50 text-red-900",
+                  },
+                  {
+                    label: "Trade-off",
+                    items: comparison.outcomes.tradeOffs,
+                    style: "border-amber-200 bg-amber-50 text-amber-900",
+                  },
+                ].map((group) => (
+                  <div key={group.label} className={`border p-3 ${group.style}`}>
+                    <p className="text-[11px] font-semibold">{group.label}</p>
+                    <ul className="mt-1 grid gap-1 text-[11px] leading-4">
+                      {(group.items.length > 0
+                        ? group.items
+                        : ["No evidence in this category."]
+                      ).map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="min-w-0">
@@ -163,6 +194,14 @@ export function RunAnalysisPanel({
               <Fact label="Duplicate calls" child={report.measuredFacts.duplicateToolCalls} />
               <Fact label="Duration" child={formatDuration(report.measuredFacts.durationMs)} />
               <Fact label="Tokens" child={report.measuredFacts.totalTokens ?? "Not reported"} />
+              {report.measuredFacts.codeFix ? (
+                <>
+                  <Fact label="Target tests" child={report.measuredFacts.codeFix.testPassed ? "passed" : "failed"} />
+                  <Fact label="Patch captured" child={report.measuredFacts.codeFix.patchCreated ? "yes" : "no"} />
+                  <Fact label="No-progress calls" child={report.measuredFacts.codeFix.noProgressCalls} />
+                  <Fact label="Safety violations" child={report.measuredFacts.codeFix.replaySafetyViolations} />
+                </>
+              ) : null}
             </div>
           </div>
 

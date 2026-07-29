@@ -5,6 +5,8 @@ import {
   codeFixRunRequestSchema,
   createDecisionProvider,
   getCodeFixScenario,
+  isDockerSandboxAvailable,
+  reserveIdempotentRun,
 } from "@/lib/agentscope/execution";
 import {
   getArtifactStore,
@@ -119,6 +121,45 @@ export async function POST(
       { status: 503 },
     );
   }
+  if (!(await isDockerSandboxAvailable())) {
+    return Response.json(
+      {
+        code: "SANDBOX_UNAVAILABLE",
+        error: "Docker sandbox is unavailable. Use the recorded demo branch.",
+      },
+      { status: 503 },
+    );
+  }
+  let reservation: ReturnType<typeof reserveIdempotentRun>;
+  try {
+    reservation = reserveIdempotentRun(
+      "fork",
+      request.headers.get("idempotency-key"),
+      JSON.stringify({
+        runId,
+        targetSpanId: parsed.data.targetSpanId,
+        decisionProvider: parsed.data.decisionProvider,
+      }),
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        code: "INVALID_IDEMPOTENCY_KEY",
+        error: error instanceof Error ? error.message : "Invalid idempotency key.",
+      },
+      { status: 400 },
+    );
+  }
+  if (reservation.duplicate) {
+    return Response.json(
+      {
+        code: "IDEMPOTENT_RUN_EXISTS",
+        error: "This idempotent fork has already been accepted.",
+        runId: reservation.runId,
+      },
+      { status: 409 },
+    );
+  }
   const workspace = await FileWorkspaceSandbox.create(
     scenario,
     undefined,
@@ -132,7 +173,10 @@ export async function POST(
   });
   incrementRuntimeMetric("forks_started");
   return createRunSseResponse(
-    new CodeFixRunExecutor().execute({
+    new CodeFixRunExecutor(
+      undefined,
+      reservation.runId ? () => reservation.runId! : undefined,
+    ).execute({
       request: runRequest,
       provider: createDecisionProvider(
         parsed.data.decisionProvider,

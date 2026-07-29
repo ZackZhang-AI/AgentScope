@@ -1,5 +1,5 @@
-import { AuditWorkbench } from "@/components/audit-workbench";
+import { CodeFixWorkbench } from "@/components/agentscope/code-fix-workbench";
 
 export default function Home() {
-  return <AuditWorkbench />;
+  return <CodeFixWorkbench />;
 }

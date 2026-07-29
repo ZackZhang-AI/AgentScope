@@ -277,6 +277,12 @@ export class CodeFixRunExecutor implements RunExecutor {
               artifactId: storedArtifact?.id ?? null,
             }),
             metrics: { durationMs: toolResult.durationMs },
+            replayability: {
+              level: "high",
+              reason:
+                "The tool call can be replayed inside an isolated workspace from its preceding decision checkpoint.",
+              checkpointId,
+            },
             ...(toolResult.error
               ? {
                   error: {

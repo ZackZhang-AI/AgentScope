@@ -6,6 +6,7 @@ import type { Artifact } from "@/lib/agentscope/domain/artifact";
 import type { ReplayCheckpoint } from "@/lib/agentscope/domain/checkpoint";
 import type { Span } from "@/lib/agentscope/domain/span";
 import { formatDuration, summarizeTokens } from "@/lib/agentscope/presentation/trace-view";
+import { ArtifactViewer } from "./artifact-viewer";
 
 type InspectorTab =
   | "overview"
@@ -13,6 +14,7 @@ type InspectorTab =
   | "output"
   | "error"
   | "metrics"
+  | "artifacts"
   | "replay"
   | "raw";
 
@@ -30,6 +32,7 @@ const tabs: { id: InspectorTab; label: string }[] = [
   { id: "output", label: "Output" },
   { id: "error", label: "Error" },
   { id: "metrics", label: "Metrics" },
+  { id: "artifacts", label: "Artifacts" },
   { id: "replay", label: "Replay" },
   { id: "raw", label: "Raw" },
 ];
@@ -190,6 +193,15 @@ export function SpanInspector({
             <Metric label="Output tokens" value={span.metrics?.tokenUsage?.outputTokens ?? "Not reported"} />
             <Metric label="Total tokens" value={tokenCount || "Not reported"} />
           </dl>
+        </div>
+      ) : null}
+      {tab === "artifacts" ? (
+        <div
+          id="inspector-panel-artifacts"
+          role="tabpanel"
+          aria-labelledby="inspector-tab-artifacts"
+        >
+          <ArtifactViewer artifacts={spanArtifacts} />
         </div>
       ) : null}
       {tab === "replay" ? (

@@ -32,7 +32,7 @@ export function redactArtifactContent(content: string) {
   };
 }
 
-function prepareArtifact(input: ArtifactInput): StoredArtifact {
+function prepareArtifact(input: ArtifactInput, id = `artifact_${randomUUID()}`): StoredArtifact {
   const sizeBeforeRedaction = Buffer.byteLength(input.content, "utf8");
   if (sizeBeforeRedaction > MAX_ARTIFACT_BYTES) {
     throw new ArtifactLimitError(
@@ -47,7 +47,7 @@ function prepareArtifact(input: ArtifactInput): StoredArtifact {
     .digest("hex");
 
   return {
-    id: `artifact_${randomUUID()}`,
+    id,
     runId: input.runId,
     spanId: input.spanId,
     kind: input.kind,
@@ -65,8 +65,19 @@ function prepareArtifact(input: ArtifactInput): StoredArtifact {
 export class MemoryArtifactStore implements ArtifactContentStore {
   readonly #artifacts = new Map<string, StoredArtifact>();
 
+  constructor(
+    private readonly idFactory?: (
+      input: ArtifactInput,
+      sequence: number,
+    ) => string,
+  ) {}
+
   async put(input: ArtifactInput) {
-    const artifact = prepareArtifact(input);
+    const artifact = prepareArtifact(
+      input,
+      this.idFactory?.(input, this.#artifacts.size) ??
+        `artifact_${randomUUID()}`,
+    );
     const runBytes = [...this.#artifacts.values()]
       .filter((item) => item.runId === input.runId)
       .reduce((total, item) => total + item.sizeBytes, 0);
@@ -81,6 +92,14 @@ export class MemoryArtifactStore implements ArtifactContentStore {
 
   async get(artifactId: string) {
     return this.#artifacts.get(artifactId) ?? null;
+  }
+
+  listForRun(runId: string, visibility?: StoredArtifact["visibility"]) {
+    return [...this.#artifacts.values()].filter(
+      (artifact) =>
+        artifact.runId === runId &&
+        (!visibility || artifact.visibility === visibility),
+    );
   }
 }
 

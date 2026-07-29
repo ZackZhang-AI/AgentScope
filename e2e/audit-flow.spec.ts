@@ -7,7 +7,7 @@ import {
 import { createRunBundle } from "../lib/agentscope/transfer/run-bundle";
 
 async function openWorkbench(page: Page) {
-  await page.goto("/");
+  await page.goto("/audit");
   await expect(page.locator("main[data-hydrated='true']")).toBeVisible();
 }
 

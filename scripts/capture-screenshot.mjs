@@ -10,12 +10,10 @@ try {
   });
   await page.goto(baseUrl);
   await page.locator("main[data-hydrated='true']").waitFor();
-  await page.getByRole("button", { name: "SQL injection risk" }).click();
-  await page.getByRole("button", { name: "Run Audit" }).click();
+  await page.getByRole("button", { name: "Start 90-second demo" }).click();
   await page
     .getByRole("heading", {
-      name: "Possible SQL injection through string-built query",
-      exact: true,
+      name: "Root cause: repeated tests produced no workspace progress",
     })
     .waitFor();
   await page.screenshot({
