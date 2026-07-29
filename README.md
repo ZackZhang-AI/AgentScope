@@ -2,15 +2,27 @@
 
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.3.0-2563eb.svg)](./CHANGELOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-[English](./README.en.md) · [架构说明](./docs/architecture.zh-CN.md) · [完整 PRD](./docs/agentscope-prd.zh-CN.md)
+[English](./README.en.md) · [更新日志](./CHANGELOG.md) · [架构说明](./docs/architecture.zh-CN.md) · [完整 PRD](./docs/agentscope-prd.zh-CN.md)
 
 AgentScope 是 HarnessLab 的 Agent 可观察性扩展：它记录 Agent 的计划、模型决策、工具调用、输入输出、延迟、Token、错误和 Artifact，并把一次失败运行变成可定位、可分支、可比较、可验证的调试闭环。
 
 旗舰案例是一条真实的代码修复 Agent 路径：读取代码、搜索符号、修改文件、运行测试；Parent Run 因错误策略陷入无进展测试循环，用户从安全 Checkpoint 创建 Child Run，应用新策略后通过测试，最后由 Compare 与 Eval 用 Span 证据证明修复有效。
 
 ![AgentScope 代码修复黑匣子](./public/harnesslab-desktop.png)
+
+## v0.3.0 更新概览
+
+- **从审计工作台扩展为 Agent 黑匣子**：新增通用多工具执行器、结构化决策 Provider 与服务端工具白名单。
+- **形成失败修复闭环**：支持 Checkpoint、不可变 Parent、Child Fork、Replay Preflight，以及代码修复前后的 Compare 与 Eval。
+- **补齐真实执行边界**：内置固定代码修复场景，使用 Docker 非 root、禁网与资源限制沙箱运行 `read/search/patch/test`。
+- **让运行证据可追溯**：PostgreSQL 持久化 Trace、Run、分析和 Artifact，提供 Patch Diff、测试日志、Span 证据与永久 Run URL。
+- **提升故障恢复能力**：支持 SSE sequence 续传、事件去重、幂等创建/Fork，并自动收敛被进程中断的运行。
+- **兼顾演示与开发**：提供无需数据库、Docker、API Key 的 90 秒录制演示，同时保留确定性沙箱和真实模型沙箱。
+
+完整版本记录见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 三种明确的执行模式
 

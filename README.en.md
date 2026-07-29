@@ -1,12 +1,25 @@
 # AgentScope — AI Agent Black Box
 
-[中文](./README.md) · [Architecture (Chinese)](./docs/architecture.zh-CN.md) · [PRD (Chinese)](./docs/agentscope-prd.zh-CN.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-2563eb.svg)](./CHANGELOG.md)
+
+[中文](./README.md) · [Changelog](./CHANGELOG.md) · [Architecture (Chinese)](./docs/architecture.zh-CN.md) · [PRD (Chinese)](./docs/agentscope-prd.zh-CN.md)
 
 AgentScope extends HarnessLab with evidence-backed Agent observability. It captures plans, model decisions, tool calls, inputs, outputs, latency, tokens, errors, and artifacts, then turns a failed run into a debuggable and verifiable branch.
 
 The flagship story follows a code-repair Agent that reads source, searches symbols, applies a patch, and runs tests. The immutable parent repeats a failing test without workspace progress. A child is restored from a safe checkpoint, applies a corrected strategy, passes the target tests, and is compared with its parent through span-linked diagnostics and deterministic evaluation.
 
 ![AgentScope code-fix black box](./public/harnesslab-desktop.png)
+
+## What's new in v0.3.0
+
+- **Agent black-box runtime:** a generic multi-tool executor, structured decision providers, and a server-owned tool allowlist.
+- **Failure-to-fix workflow:** checkpoints, immutable parents, child forks, replay preflight, and evidence-linked comparison and evaluation.
+- **Real execution boundary:** a fixed code-repair scenario that runs `read/search/patch/test` inside a non-root, network-disabled, resource-limited Docker sandbox.
+- **Durable evidence:** PostgreSQL-backed traces, runs, analyses, and artifacts with patch diffs, test logs, span evidence, and permanent run URLs.
+- **Recovery and idempotency:** sequence-based SSE resume, event deduplication, idempotent run/fork creation, and interrupted-run convergence.
+- **Demo-to-development path:** a 90-second recorded demo with no infrastructure requirements, plus deterministic and live-model sandbox modes.
+
+See [CHANGELOG.md](./CHANGELOG.md) for the complete release history.
 
 ## Execution modes
 
