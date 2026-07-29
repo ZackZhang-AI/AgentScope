@@ -227,14 +227,48 @@ export class CodeFixRunExecutor implements RunExecutor {
         });
         previousResults.push(toolResult);
 
+        const storedArtifact =
+          toolResult.artifact && command.artifactStore
+            ? await command.artifactStore.put({
+                runId,
+                spanId: toolSpanId,
+                ...toolResult.artifact,
+              })
+            : undefined;
+
+        if (storedArtifact) {
+          yield emit(
+            recorder.addArtifact({
+              id: storedArtifact.id,
+              runId,
+              spanId: toolSpanId,
+              kind: storedArtifact.kind,
+              mediaType: storedArtifact.mediaType,
+              storageKey: `artifact://${storedArtifact.id}`,
+              contentHash: storedArtifact.contentHash,
+              sizeBytes: storedArtifact.sizeBytes,
+              redactionState: storedArtifact.redactionState,
+              createdAt: storedArtifact.createdAt,
+              schemaVersion,
+            }),
+          );
+        }
+
         yield emit(
           recorder.endSpan(toolSpanId, {
             status: toolResult.status,
-            outputRef: inline({
-              output: toolResult.output,
-              workspaceHash: toolResult.workspaceHash,
-              progressHash: toolResult.progressHash,
-            }),
+            outputRef: storedArtifact
+              ? {
+                  kind: "artifact",
+                  artifactId: storedArtifact.id,
+                  summary: storedArtifact.name,
+                  redacted: storedArtifact.redactionState === "redacted",
+                }
+              : inline({
+                  output: toolResult.output,
+                  workspaceHash: toolResult.workspaceHash,
+                  progressHash: toolResult.progressHash,
+                }),
             metrics: { durationMs: toolResult.durationMs },
             ...(toolResult.error
               ? {

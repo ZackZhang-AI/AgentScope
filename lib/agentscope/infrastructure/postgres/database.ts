@@ -1,9 +1,11 @@
 import { Pool } from "pg";
 import { PostgresTraceRepository } from "./postgres-trace-repository";
+import { PostgresArtifactStore } from "../../execution/artifact-store";
 
 const globalDatabase = globalThis as typeof globalThis & {
   agentscopePool?: Pool;
   agentscopeTraceRepository?: PostgresTraceRepository;
+  agentscopeArtifactStore?: PostgresArtifactStore;
 };
 
 function createPool() {
@@ -36,10 +38,22 @@ export function getOptionalTraceRepository() {
   return process.env.DATABASE_URL ? getTraceRepository() : null;
 }
 
+export function getArtifactStore() {
+  globalDatabase.agentscopeArtifactStore ??= new PostgresArtifactStore(
+    getDatabasePool(),
+  );
+  return globalDatabase.agentscopeArtifactStore;
+}
+
+export function getOptionalArtifactStore() {
+  return process.env.DATABASE_URL ? getArtifactStore() : null;
+}
+
 export async function closeDatabasePool() {
   if (globalDatabase.agentscopePool) {
     await globalDatabase.agentscopePool.end();
     delete globalDatabase.agentscopePool;
     delete globalDatabase.agentscopeTraceRepository;
+    delete globalDatabase.agentscopeArtifactStore;
   }
 }

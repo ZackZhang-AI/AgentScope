@@ -27,12 +27,14 @@ import { closeDatabasePool } from "../lib/agentscope/infrastructure/postgres/dat
 import { POST as runAudit } from "../app/api/audit/route";
 import { POST as forkRun } from "../app/api/v1/runs/[runId]/fork/route";
 import type { AuditStreamMessage } from "../lib/types";
+import { PostgresArtifactStore } from "../lib/agentscope/execution";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
   const pool = new Pool({ connectionString: databaseUrl, max: 2 });
   const repository = new PostgresTraceRepository(pool);
+  const artifactStore = new PostgresArtifactStore(pool);
 
   beforeAll(async () => {
     const migrationDirectory = resolve("db/migrations");
@@ -47,6 +49,7 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
   });
 
   beforeEach(async () => {
+    await pool.query("DELETE FROM agentscope_artifacts");
     await pool.query("DELETE FROM agentscope_trace_events");
     await pool.query("DELETE FROM agentscope_runs");
   });
@@ -186,6 +189,27 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
         reportSchemaVersion: 1,
         evaluator: "agentscope-deterministic-v1",
       });
+  });
+
+  it("stores redacted artifact content under the owning run", async () => {
+    const fixture = traceFixtureSchema.parse(successfulFixture);
+    await repository.appendMany(fixture.events);
+
+    const artifact = await artifactStore.put({
+      runId: "run_success_001",
+      spanId: "span_success_tool",
+      kind: "text",
+      mediaType: "text/plain",
+      name: "tool output",
+      content: "DEMO_API_KEY=abcdefghijklmnop",
+    });
+    const stored = await artifactStore.get(artifact.id);
+
+    expect(stored).toMatchObject({
+      runId: "run_success_001",
+      redactionState: "redacted",
+      content: "DEMO_API_KEY=[REDACTED]",
+    });
   });
 
   it("persists the real audit API trace when DATABASE_URL is configured", async () => {

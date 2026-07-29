@@ -11,7 +11,7 @@ export const artifactSchema = z
     storageKey: z.string().min(1),
     contentHash: z.string().regex(/^[a-f0-9]{16,128}$/),
     sizeBytes: z.number().int().nonnegative(),
-    redactionState: z.enum(["unscanned", "redacted", "blocked"]),
+    redactionState: z.enum(["unscanned", "clean", "redacted", "blocked"]),
     createdAt: isoTimestampSchema,
     schemaVersion: z.literal(schemaVersion),
   })

@@ -158,6 +158,36 @@ export interface WorkspaceSandbox {
   dispose(): Promise<void>;
 }
 
+export type ArtifactInput = {
+  runId: string;
+  spanId?: string;
+  kind: "diff" | "text" | "json";
+  mediaType: "text/x-diff" | "text/plain" | "application/json";
+  name: string;
+  content: string;
+  visibility?: "user" | "internal";
+};
+
+export type StoredArtifact = {
+  id: string;
+  runId: string;
+  spanId?: string;
+  kind: ArtifactInput["kind"];
+  mediaType: ArtifactInput["mediaType"];
+  name: string;
+  content: string;
+  contentHash: string;
+  sizeBytes: number;
+  redactionState: "clean" | "redacted" | "blocked";
+  visibility: "user" | "internal";
+  createdAt: string;
+};
+
+export interface ArtifactContentStore {
+  put(input: ArtifactInput): Promise<StoredArtifact>;
+  get(artifactId: string): Promise<StoredArtifact | null>;
+}
+
 export type ToolExecutionContext = {
   workspace: WorkspaceSandbox;
 };
@@ -177,6 +207,7 @@ export type ExecuteRunCommand = {
   request: CodeFixRunRequest;
   provider: DecisionProvider;
   workspace: WorkspaceSandbox;
+  artifactStore?: ArtifactContentStore;
   branch?: {
     parentRunId: string;
     forkedFromSpanId: string;

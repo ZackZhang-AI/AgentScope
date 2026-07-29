@@ -19,7 +19,7 @@ export function canDeleteUser(session: Session, targetUserId: string) {
 }
 `;
 
-const authTest = `import { canDeleteUser, type Session } from "./auth";
+const authTest = `import { canDeleteUser, type Session } from "./auth.ts";
 
 const admin: Session = { userId: "admin-1", role: "admin" };
 const user: Session = { userId: "user-1", role: "user" };
