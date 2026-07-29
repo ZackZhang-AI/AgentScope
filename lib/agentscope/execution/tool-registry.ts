@@ -29,7 +29,7 @@ const definitions: ToolDescription[] = [
   {
     name: "run_tests",
     version: "1.0.0",
-    sideEffect: "side_effect",
+    sideEffect: "idempotent",
     description: "Run the server-owned scenario test command.",
   },
 ];

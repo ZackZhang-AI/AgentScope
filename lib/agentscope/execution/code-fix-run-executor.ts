@@ -126,13 +126,26 @@ export class CodeFixRunExecutor implements RunExecutor {
           }),
         );
 
+        const storedSnapshot = command.artifactStore
+          ? await command.artifactStore.put({
+              runId,
+              spanId: decisionSpanId,
+              kind: "json",
+              mediaType: "application/json",
+              name: `Workspace checkpoint ${step + 1}`,
+              content: JSON.stringify(snapshot.files),
+              visibility: "internal",
+            })
+          : undefined;
         const checkpointId = `${runId}:checkpoint:${step + 1}`;
         yield emit(
           recorder.addCheckpoint({
             id: checkpointId,
             runId,
             spanId: decisionSpanId,
-            stateRef: snapshot.ref,
+            stateRef: storedSnapshot
+              ? `artifact://${storedSnapshot.id}`
+              : snapshot.ref,
             configSnapshot: {
               scenarioId: scenario.id,
               decisionProvider: command.provider.id,
@@ -257,18 +270,12 @@ export class CodeFixRunExecutor implements RunExecutor {
         yield emit(
           recorder.endSpan(toolSpanId, {
             status: toolResult.status,
-            outputRef: storedArtifact
-              ? {
-                  kind: "artifact",
-                  artifactId: storedArtifact.id,
-                  summary: storedArtifact.name,
-                  redacted: storedArtifact.redactionState === "redacted",
-                }
-              : inline({
-                  output: toolResult.output,
-                  workspaceHash: toolResult.workspaceHash,
-                  progressHash: toolResult.progressHash,
-                }),
+            outputRef: inline({
+              output: toolResult.output,
+              workspaceHash: toolResult.workspaceHash,
+              progressHash: toolResult.progressHash,
+              artifactId: storedArtifact?.id ?? null,
+            }),
             metrics: { durationMs: toolResult.durationMs },
             ...(toolResult.error
               ? {

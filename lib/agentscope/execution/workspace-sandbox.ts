@@ -153,10 +153,27 @@ export class FileWorkspaceSandbox implements WorkspaceSandbox {
   static async create(
     scenario: CodeFixScenario,
     testRunner: ScenarioTestRunner = new DockerScenarioTestRunner(),
+    initialFiles: Readonly<Record<string, string>> = scenario.files,
   ) {
     const root = await mkdtemp(join(tmpdir(), "agentscope-codefix-"));
     const workspace = new FileWorkspaceSandbox(root, scenario, testRunner);
-    for (const [path, content] of Object.entries(scenario.files)) {
+    const expectedFiles = Object.keys(scenario.files).sort();
+    const restoredFiles = Object.keys(initialFiles).sort();
+    if (JSON.stringify(expectedFiles) !== JSON.stringify(restoredFiles)) {
+      await workspace.dispose();
+      throw new WorkspacePolicyError(
+        "WORKSPACE_SNAPSHOT_INVALID",
+        "Workspace snapshot files do not match the scenario manifest.",
+      );
+    }
+    for (const [path, content] of Object.entries(initialFiles)) {
+      if (Buffer.byteLength(content, "utf8") > 64 * 1024) {
+        await workspace.dispose();
+        throw new WorkspacePolicyError(
+          "WORKSPACE_SNAPSHOT_INVALID",
+          `Workspace snapshot file ${path} exceeds 64KB.`,
+        );
+      }
       const destination = workspace.resolveKnownPath(path);
       await mkdir(dirname(destination), { recursive: true });
       await writeFile(destination, content, "utf8");

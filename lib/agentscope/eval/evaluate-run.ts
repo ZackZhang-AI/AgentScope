@@ -11,6 +11,9 @@ export const evalScoreSchema = z
       "tool_reliability",
       "loop_efficiency",
       "trace_integrity",
+      "test_verification",
+      "change_scope",
+      "replay_safety",
     ]),
     label: z.string().min(1),
     score: z.number().int().min(0).max(100),
@@ -38,6 +41,16 @@ export const runEvalReportSchema = z
         duplicateToolCalls: z.number().int().nonnegative(),
         durationMs: z.number().int().nonnegative(),
         totalTokens: z.number().int().nonnegative().optional(),
+        codeFix: z
+          .object({
+            testPassed: z.boolean(),
+            patchCreated: z.boolean(),
+            outOfScopeModification: z.boolean(),
+            replaySafetyViolations: z.number().int().nonnegative(),
+            noProgressCalls: z.number().int().nonnegative(),
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
     scores: z.array(evalScoreSchema),
@@ -113,6 +126,61 @@ export function evaluateRun(projection: RunProjection): RunEvalReport {
       evidenceSpanIds: projection.dataQualityIssues.flatMap((issue) => issue.spanId ? [issue.spanId] : []),
     },
   ];
+  const isCodeFix = projection.run.taskType === "code_fix";
+  const testSpans = toolSpans.filter((span) => span.name === "run_tests");
+  const passedTest = testSpans.find((span) => span.status === "success");
+  const patchSpans = toolSpans.filter((span) => span.name === "apply_patch");
+  const policyViolations = toolSpans.filter(
+    (span) =>
+      span.status === "error" &&
+      ["WORKSPACE_PATH_BLOCKED", "PATCH_PATH_BLOCKED"].includes(
+        span.error?.code ?? "",
+      ),
+  );
+  const noProgressEvidence = diagnostics
+    .filter((item) => item.ruleId === "no-progress-loop")
+    .flatMap((item) => item.evidenceSpanIds);
+  if (isCodeFix) {
+    scores.push(
+      {
+        id: "test_verification",
+        label: "Test verification",
+        score: passedTest ? 100 : 0,
+        basis: "deterministic_rule",
+        explanation: passedTest
+          ? "The fixed scenario test command completed successfully."
+          : "No successful target test execution was captured.",
+        evidenceSpanIds: passedTest
+          ? [passedTest.id]
+          : testSpans.map((span) => span.id),
+      },
+      {
+        id: "change_scope",
+        label: "Change scope",
+        score: policyViolations.length === 0 && patchSpans.length > 0 ? 100 : 0,
+        basis: "deterministic_rule",
+        explanation:
+          policyViolations.length === 0
+            ? `${patchSpans.length} patch calls remained inside the scenario allowlist.`
+            : `${policyViolations.length} out-of-scope workspace changes were blocked.`,
+        evidenceSpanIds:
+          policyViolations.length > 0
+            ? policyViolations.map((span) => span.id)
+            : patchSpans.map((span) => span.id),
+      },
+      {
+        id: "replay_safety",
+        label: "Replay safety",
+        score: policyViolations.length === 0 ? 100 : 0,
+        basis: "deterministic_rule",
+        explanation:
+          policyViolations.length === 0
+            ? "No workspace or patch policy violations were captured."
+            : "At least one sandbox policy violation was captured.",
+        evidenceSpanIds: policyViolations.map((span) => span.id),
+      },
+    );
+  }
   const overallScore = Math.round(
     scores.reduce((sum, score) => sum + score.score, 0) / scores.length,
   );
@@ -138,6 +206,15 @@ export function evaluateRun(projection: RunProjection): RunEvalReport {
       duplicateToolCalls,
       durationMs: duration(projection),
       totalTokens: hasTokens ? tokenValues.reduce((sum, value) => sum + value, 0) : undefined,
+      codeFix: isCodeFix
+        ? {
+            testPassed: Boolean(passedTest),
+            patchCreated: patchSpans.length > 0,
+            outOfScopeModification: policyViolations.length > 0,
+            replaySafetyViolations: policyViolations.length,
+            noProgressCalls: new Set(noProgressEvidence).size,
+          }
+        : undefined,
     },
     scores,
     limitations,

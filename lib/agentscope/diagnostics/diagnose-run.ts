@@ -47,6 +47,14 @@ function toolSignature(span: Span) {
   return JSON.stringify([span.name, input]);
 }
 
+function progressHash(span: Span) {
+  if (span.outputRef?.kind !== "inline") return undefined;
+  const data = span.outputRef.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
+  const value = data.progressHash;
+  return typeof value === "string" ? value : undefined;
+}
+
 function duration(span: Span) {
   return span.metrics?.durationMs ?? (
     span.endedAt ? Math.max(0, Date.parse(span.endedAt) - Date.parse(span.startedAt)) : 0
@@ -102,6 +110,25 @@ export function diagnoseRun(projection: RunProjection): Diagnostic[] {
       evidenceSpanIds: group.map((span) => span.id),
       confidence: 0.98,
     });
+
+    const hashes = group.map(progressHash);
+    if (
+      group.length >= 3 &&
+      hashes.every((hash): hash is string => Boolean(hash)) &&
+      new Set(hashes).size === 1
+    ) {
+      diagnostics.push({
+        id: `diag_no_progress_${first.id}`,
+        ruleId: "no-progress-loop",
+        ruleVersion: 1,
+        severity: "error",
+        category: "loop",
+        title: "No-progress tool loop",
+        explanation: `${first.name} repeated ${group.length} times while the workspace and result hashes remained unchanged.`,
+        evidenceSpanIds: group.map((span) => span.id),
+        confidence: 1,
+      });
+    }
   }
 
   const timed = orderedSpans.filter(

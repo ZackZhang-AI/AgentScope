@@ -35,6 +35,11 @@ export type RunComparison = {
   parentFacts: RunFacts;
   childFacts: RunFacts;
   summary: string[];
+  outcomes: {
+    resolved: string[];
+    regressed: string[];
+    tradeOffs: string[];
+  };
 };
 
 function runDuration(projection: RunProjection) {
@@ -188,6 +193,40 @@ export function compareRuns(
   if (parentFacts.totalTokens !== undefined && childFacts.totalTokens !== undefined) {
     summary.push(`Reported tokens changed by ${childFacts.totalTokens - parentFacts.totalTokens}.`);
   }
+  const resolved: string[] = [];
+  const regressed: string[] = [];
+  const tradeOffs: string[] = [];
+  if (parent.run.status === "error" && child.run.status === "success") {
+    resolved.push("The child completed the task that failed in the parent.");
+  }
+  if (childFacts.errorCount < parentFacts.errorCount) {
+    resolved.push(
+      `${parentFacts.errorCount - childFacts.errorCount} captured errors were removed.`,
+    );
+  } else if (childFacts.errorCount > parentFacts.errorCount) {
+    regressed.push(
+      `${childFacts.errorCount - parentFacts.errorCount} new captured errors appeared.`,
+    );
+  }
+  if (childFacts.duplicateToolCalls < parentFacts.duplicateToolCalls) {
+    resolved.push("The no-progress duplicate tool loop was reduced.");
+  } else if (childFacts.duplicateToolCalls > parentFacts.duplicateToolCalls) {
+    regressed.push("The child introduced additional duplicate tool calls.");
+  }
+  if (childFacts.durationMs > parentFacts.durationMs) {
+    tradeOffs.push(
+      `The child used ${childFacts.durationMs - parentFacts.durationMs} ms more runtime.`,
+    );
+  }
+  if (
+    parentFacts.totalTokens !== undefined &&
+    childFacts.totalTokens !== undefined &&
+    childFacts.totalTokens > parentFacts.totalTokens
+  ) {
+    tradeOffs.push(
+      `The child used ${childFacts.totalTokens - parentFacts.totalTokens} more reported tokens.`,
+    );
+  }
 
   return {
     parentRunId: parent.run.id,
@@ -201,5 +240,6 @@ export function compareRuns(
     parentFacts,
     childFacts,
     summary,
+    outcomes: { resolved, regressed, tradeOffs },
   };
 }

@@ -28,6 +28,16 @@ import { POST as runAudit } from "../app/api/audit/route";
 import { POST as forkRun } from "../app/api/v1/runs/[runId]/fork/route";
 import type { AuditStreamMessage } from "../lib/types";
 import { PostgresArtifactStore } from "../lib/agentscope/execution";
+import {
+  CodeFixRunExecutor,
+  FileWorkspaceSandbox,
+  FixtureDecisionProvider,
+  buggyAuthApiScenario,
+  type RunStreamMessage,
+  type ScenarioTestRunner,
+} from "../lib/agentscope/execution";
+import { createRunSseResponse } from "../lib/agentscope/transport/run-sse-response";
+import { POST as forkCodeFixRun } from "../app/api/v1/runs/[runId]/forks/route";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -297,4 +307,79 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
     expect(childAnalyses).toHaveLength(2);
     expect(parentAfter).toEqual(parentBefore);
   });
+
+  it("restores a code-fix workspace checkpoint into an immutable child run", async () => {
+    vi.stubEnv("DATABASE_URL", databaseUrl);
+    const testRunner: ScenarioTestRunner = {
+      async run(workspaceRoot) {
+        const source = await readFile(resolve(workspaceRoot, "src/auth.ts"), "utf8");
+        const passed = source.includes('session.role === "admin"');
+        return {
+          passed,
+          exitCode: passed ? 0 : 1,
+          output: passed ? "auth policy tests passed" : "Admin test failed",
+          timedOut: false,
+        };
+      },
+    };
+    const workspace = await FileWorkspaceSandbox.create(
+      buggyAuthApiScenario,
+      testRunner,
+    );
+    const parentResponse = createRunSseResponse(
+      new CodeFixRunExecutor().execute({
+        request: {
+          taskType: "code_fix",
+          scenarioId: "buggy-auth-api",
+          executionMode: "sandbox",
+          decisionProvider: "fixture",
+        },
+        provider: new FixtureDecisionProvider("parent"),
+        workspace,
+        artifactStore,
+      }),
+      repository,
+    );
+    const parentMessages = (await parentResponse.text())
+      .split("\n")
+      .filter((line) => line.startsWith("data: "))
+      .map((line) => JSON.parse(line.slice(6)) as RunStreamMessage);
+    const parent = parentMessages.find(
+      (message): message is Extract<RunStreamMessage, { type: "result" }> =>
+        message.type === "result",
+    )?.result;
+    expect(parent).toBeDefined();
+    if (!parent) return;
+    const parentBefore = await repository.getProjection(parent.id);
+    const targetSpanId = `${parent.id}:decision:4`;
+
+    const childResponse = await forkCodeFixRun(
+      new Request(`http://localhost/api/v1/runs/${parent.id}/forks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          targetSpanId,
+          decisionProvider: "fixture",
+        }),
+      }),
+      { params: Promise.resolve({ runId: parent.id }) },
+    );
+    const childMessages = (await childResponse.text())
+      .split("\n")
+      .filter((line) => line.startsWith("data: "))
+      .map((line) => JSON.parse(line.slice(6)) as RunStreamMessage);
+    const child = childMessages.find(
+      (message): message is Extract<RunStreamMessage, { type: "result" }> =>
+        message.type === "result",
+    )?.result;
+
+    expect(child?.trace.run).toMatchObject({
+      status: "success",
+      parentRunId: parent.id,
+      forkedFromSpanId: targetSpanId,
+    });
+    expect(child?.trace.spans.find((span) => span.name === "run_tests")?.status)
+      .toBe("success");
+    expect(await repository.getProjection(parent.id)).toEqual(parentBefore);
+  }, 60_000);
 });

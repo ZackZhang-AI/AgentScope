@@ -9,6 +9,10 @@ import {
   type ToolExecutionResult,
   type WorkspaceSandbox,
 } from "../lib/agentscope/execution";
+import { diagnoseRun } from "../lib/agentscope/diagnostics/diagnose-run";
+import { evaluateRun } from "../lib/agentscope/eval/evaluate-run";
+import { compareRuns } from "../lib/agentscope/compare/compare-runs";
+import type { RunProjection } from "../lib/agentscope/domain";
 
 class TestWorkspace implements WorkspaceSandbox {
   private files = {
@@ -81,6 +85,30 @@ class TestWorkspace implements WorkspaceSandbox {
 }
 
 describe("generic code-fix execution", () => {
+  async function run(
+    profile: "parent" | "repair",
+    id: string,
+    branch?: { parentRunId: string; forkedFromSpanId: string },
+  ) {
+    const executor = new CodeFixRunExecutor(new ToolRegistry(), () => id);
+    let projection: RunProjection | undefined;
+    for await (const message of executor.execute({
+      request: {
+        taskType: "code_fix",
+        scenarioId: "buggy-auth-api",
+        executionMode: "sandbox",
+        decisionProvider: "fixture",
+      },
+      provider: new FixtureDecisionProvider(profile),
+      workspace: new TestWorkspace(),
+      branch,
+    })) {
+      if (message.type === "result") projection = message.result.trace;
+    }
+    if (!projection) throw new Error("Expected a code-fix projection.");
+    return projection;
+  }
+
   it("validates recorded runs as fixture-only", () => {
     expect(
       codeFixRunRequestSchema.safeParse({
@@ -158,5 +186,46 @@ describe("generic code-fix execution", () => {
     expect(
       result.result.trace.spans.find((span) => span.name === "run_tests")?.status,
     ).toBe("success");
+  });
+
+  it("derives no-progress evidence, code-fix eval facts and resolved outcomes", async () => {
+    const parent = await run("parent", "codefix_parent_analysis");
+    const child = await run("repair", "codefix_child_analysis", {
+      parentRunId: parent.run.id,
+      forkedFromSpanId: `${parent.run.id}:decision:4`,
+    });
+
+    const diagnostics = diagnoseRun(parent);
+    const parentEval = evaluateRun(parent);
+    const childEval = evaluateRun(child);
+    const comparison = compareRuns(parent, child);
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: "no-progress-loop",
+          evidenceSpanIds: expect.arrayContaining([
+            `${parent.run.id}:tool:4`,
+            `${parent.run.id}:tool:6`,
+          ]),
+        }),
+      ]),
+    );
+    expect(parentEval.measuredFacts.codeFix).toMatchObject({
+      testPassed: false,
+      noProgressCalls: 3,
+    });
+    expect(childEval.measuredFacts.codeFix).toMatchObject({
+      testPassed: true,
+      patchCreated: true,
+      replaySafetyViolations: 0,
+    });
+    expect(comparison.outcomes.resolved).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("completed the task"),
+        expect.stringContaining("duplicate tool loop"),
+      ]),
+    );
+    expect(comparison.outcomes.regressed).toHaveLength(0);
   });
 });
