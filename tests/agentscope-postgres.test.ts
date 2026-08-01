@@ -378,7 +378,7 @@ describe.skipIf(!databaseUrl)("PostgresTraceRepository", () => {
       parentRunId: parent.id,
       forkedFromSpanId: targetSpanId,
     });
-    expect(child?.trace.spans.find((span) => span.name === "run_tests")?.status)
+    expect(child?.trace.spans.filter((span) => span.name === "run_tests").at(-1)?.status)
       .toBe("success");
     expect(await repository.getProjection(parent.id)).toEqual(parentBefore);
   }, 60_000);
