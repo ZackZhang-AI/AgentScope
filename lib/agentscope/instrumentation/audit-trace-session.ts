@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { TraceRecorder } from "../application/trace-recorder";
 import {
   schemaVersion,
@@ -77,7 +77,7 @@ export class AuditTraceSession {
     this.#promptVersion = promptVersion;
     this.#startedAt = startedAt;
 
-    const runId = `audit_${parsedInput.contentHash}_${Date.now().toString(36)}`;
+    const runId = `audit_${parsedInput.contentHash}_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`;
     const files = parsedInput.files.length
       ? parsedInput.files.join(", ")
       : "pasted content";
