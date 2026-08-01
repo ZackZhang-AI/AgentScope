@@ -66,16 +66,19 @@ describe("Trace Explorer performance fixture", () => {
     const startedAt = performance.now();
     render(createElement(
       I18nProvider,
-      { locale: "en", dictionary: en },
-      createElement(TraceExplorer, {
-        events: [],
-        projection: thousandSpanProjection(),
-        isRunning: false,
-        provider: "mock",
-        isForking: false,
-        onForkSpan: async () => true,
-        replayMode: "fixture",
-      }),
+      {
+        locale: "en",
+        dictionary: en,
+        children: createElement(TraceExplorer, {
+          events: [],
+          projection: thousandSpanProjection(),
+          isRunning: false,
+          provider: "mock",
+          isForking: false,
+          onForkSpan: async () => true,
+          replayMode: "fixture",
+        }),
+      },
     ));
     const elapsedMs = performance.now() - startedAt;
 
