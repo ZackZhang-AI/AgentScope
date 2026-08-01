@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -156,6 +157,9 @@ export class FileWorkspaceSandbox implements WorkspaceSandbox {
     initialFiles: Readonly<Record<string, string>> = scenario.files,
   ) {
     const root = await mkdtemp(join(tmpdir(), "agentscope-codefix-"));
+    // mkdtemp uses 0700 on Linux; the non-root test container needs read access
+    // to the workspace that is mounted read-only.
+    await chmod(root, 0o755);
     const workspace = new FileWorkspaceSandbox(root, scenario, testRunner);
     const expectedFiles = Object.keys(scenario.files).sort();
     const restoredFiles = Object.keys(initialFiles).sort();
@@ -177,6 +181,7 @@ export class FileWorkspaceSandbox implements WorkspaceSandbox {
       const destination = workspace.resolveKnownPath(path);
       await mkdir(dirname(destination), { recursive: true });
       await writeFile(destination, content, "utf8");
+      await chmod(destination, 0o644);
     }
     return workspace;
   }
