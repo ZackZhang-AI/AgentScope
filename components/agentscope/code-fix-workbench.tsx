@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { TraceExplorer } from "./trace-explorer";
 import { CodeFixLauncher, type AgentScopeCapabilities } from "./code-fix-launcher";
-import { DemoProgress } from "./demo-progress";
+import { DemoProgress, type DemoStepId } from "./demo-progress";
+import { VerifiedFixSummary } from "./verified-fix-summary";
 import type {
   CodeFixRunRequest,
   CodeFixRunResult,
@@ -16,6 +17,8 @@ import type {
   TraceEvent,
 } from "@/lib/agentscope/domain";
 import { consumeRunStream } from "@/lib/client/run-stream";
+import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
+import type { InspectorTab } from "./span-inspector";
 
 type CodeFixWorkbenchProps = {
   initialRunId?: string;
@@ -59,6 +62,12 @@ export function CodeFixWorkbench({
   const [mode, setMode] = useState<"recorded" | "sandbox">("recorded");
   const [busy, setBusy] = useState(autoStartDemo || Boolean(initialRunId));
   const [error, setError] = useState<string>();
+  const [guideStep, setGuideStep] = useState<DemoStepId>("failure");
+  const [focusRequest, setFocusRequest] = useState<{
+    spanId: string;
+    inspectorTab: InspectorTab;
+    nonce: number;
+  }>();
 
   const loadDemo = useCallback(async () => {
     setBusy(true);
@@ -71,6 +80,8 @@ export function CodeFixWorkbench({
       setMode("recorded");
       setProvider("fixture");
       setParentProjection(undefined);
+      setGuideStep("failure");
+      setFocusRequest(undefined);
       setActiveResult(payload.parent.result);
       setEvents(payload.parent.events);
       window.history.replaceState(null, "", "/demos/code-fix-loop");
@@ -105,6 +116,8 @@ export function CodeFixWorkbench({
         setMode("recorded");
         setProvider("fixture");
         setParentProjection(undefined);
+        setGuideStep("failure");
+        setFocusRequest(undefined);
         setActiveResult(payload.parent.result);
         setEvents(payload.parent.events);
       })
@@ -199,6 +212,8 @@ export function CodeFixWorkbench({
     setActiveResult(undefined);
     setEvents([]);
     setMode("sandbox");
+    setGuideStep("failure");
+    setFocusRequest(undefined);
     try {
       const response = await fetch("/api/v1/runs", {
         method: "POST",
@@ -237,6 +252,7 @@ export function CodeFixWorkbench({
         setParentProjection(parent);
         setActiveResult(demo.child.result);
         setEvents(demo.child.events);
+        setGuideStep("verified");
         window.history.replaceState(null, "", "/demos/code-fix-loop?view=verified");
         return true;
       }
@@ -259,6 +275,7 @@ export function CodeFixWorkbench({
         },
       );
       await consumeExecution(response);
+      setGuideStep("verified");
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Fork failed.");
@@ -272,8 +289,35 @@ export function CodeFixWorkbench({
   const isVerified = Boolean(
     projection?.run.status === "success" && projection.run.parentRunId,
   );
-  const progress = isVerified ? 3 : projection ? 1 : 0;
   const providerLabel = projection?.run.configSnapshot.provider ?? provider;
+  const diagnostics = useMemo(
+    () => projection ? diagnoseRun(projection) : [],
+    [projection],
+  );
+  const firstFailureSpanId = diagnostics.find(
+    (diagnostic) => diagnostic.ruleId === "first-unrecovered-error",
+  )?.evidenceSpanIds[0];
+  const noProgressDiagnostic = diagnostics.find(
+    (diagnostic) => diagnostic.ruleId === "no-progress-loop",
+  );
+  const noProgressSpanId = noProgressDiagnostic?.evidenceSpanIds[0];
+  const availableSteps: DemoStepId[] = isVerified
+    ? ["verified"]
+    : projection
+      ? ["failure", "root-cause", "fork"]
+      : [];
+
+  function selectGuideStep(step: DemoStepId) {
+    if (!availableSteps.includes(step)) return;
+    setGuideStep(step);
+    const spanId = step === "failure" ? firstFailureSpanId : noProgressSpanId;
+    if (!spanId || step === "verified") return;
+    setFocusRequest({
+      spanId,
+      inspectorTab: step === "fork" ? "replay" : "error",
+      nonce: Date.now(),
+    });
+  }
 
   return (
     <main
@@ -290,7 +334,11 @@ export function CodeFixWorkbench({
         onLoadDemo={() => void loadDemo()}
         onRunSandbox={() => void runSandbox()}
       />
-      <DemoProgress current={progress} />
+      <DemoProgress
+        current={isVerified ? "verified" : guideStep}
+        available={availableSteps}
+        onSelect={selectGuideStep}
+      />
 
       <div className="mx-auto grid max-w-[1800px] gap-4 p-4 lg:p-6">
         {error ? (
@@ -302,42 +350,54 @@ export function CodeFixWorkbench({
 
         {projection ? (
           <>
-            <section
-              className={`grid gap-3 border-l-2 p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${
-                isVerified
-                  ? "border-emerald-600 bg-emerald-50"
-                  : "border-amber-500 bg-amber-50"
-              }`}
+            {!isVerified ? <section
+              className="grid gap-3 border-l-2 border-amber-500 bg-amber-50 p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
               aria-live="polite"
             >
-              {isVerified ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-700" aria-hidden="true" />
-              ) : (
-                <AlertTriangle className="h-5 w-5 text-amber-700" aria-hidden="true" />
-              )}
+              <AlertTriangle className="h-5 w-5 text-amber-700" aria-hidden="true" />
               <div>
                 <h2 className="text-sm font-semibold text-zinc-950">
-                  {isVerified
-                    ? "Verified fix: the child test passed"
-                    : "Root cause: repeated tests produced no workspace progress"}
+                  {guideStep === "failure"
+                    ? "Failure: the parent ends after repeating the same test"
+                    : guideStep === "root-cause"
+                      ? "Root cause: workspace and test hashes never changed"
+                      : "Fork: restore the safe checkpoint into a new child run"}
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-zinc-600">
-                  {isVerified
-                    ? "Compare the child with its immutable parent, then open the test and Patch artifacts as evidence."
-                    : "Open the No-progress tool loop diagnostic, select its first run_tests span, then use Replay to create a child."}
+                  {guideStep === "failure"
+                    ? "Inspect the earliest failed run_tests span before following the error chain."
+                    : guideStep === "root-cause"
+                      ? `no-progress-loop · confidence ${Math.round((noProgressDiagnostic?.confidence ?? 0) * 100)}% · evidence ${noProgressSpanId ?? "unavailable"}`
+                      : "The Replay tab shows checkpoint completeness and policy checks. Fork creates a child without changing Parent events or workspace state."}
                 </p>
               </div>
-              {!isVerified ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900">
-                  Diagnostics
+              {guideStep !== "fork" ? (
+                <button
+                  type="button"
+                  onClick={() => selectGuideStep(guideStep === "failure" ? "root-cause" : "fork")}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+                >
+                  {guideStep === "failure" ? "Locate root cause" : "Inspect safe checkpoint"}
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  Replay
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+                  Inspector Replay
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
-              ) : null}
-            </section>
+              )}
+            </section> : null}
+
+            {isVerified && parentProjection ? (
+              <VerifiedFixSummary
+                parent={parentProjection}
+                child={projection}
+                onRestart={() => void loadDemo()}
+              />
+            ) : null}
 
             <TraceExplorer
-              key={projection.run.id}
+              key={`${projection.run.id}:${focusRequest?.nonce ?? "default"}`}
               events={events}
               projection={projection}
               isRunning={busy}
@@ -346,6 +406,7 @@ export function CodeFixWorkbench({
               onForkSpan={forkFromSpan}
               parentProjection={parentProjection}
               replayMode={mode === "recorded" ? "fixture" : "fork"}
+              focusRequest={focusRequest}
             />
           </>
         ) : (

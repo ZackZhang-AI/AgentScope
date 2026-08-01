@@ -2,13 +2,14 @@
 
 import {
   Bot,
+  BookOpenText,
   CirclePlay,
   Container,
-  ExternalLink,
 } from "lucide-react";
 import type { CodeFixRunRequest } from "@/lib/agentscope/execution";
 
 export type AgentScopeCapabilities = {
+  executionProfile: "recorded_only" | "local_sandbox";
   recordedDemo: { available: boolean };
   sandbox: {
     available: boolean;
@@ -63,10 +64,13 @@ export function CodeFixLauncher({
   const providerAvailable =
     capabilities?.providers[provider]?.available ?? provider === "fixture";
   const canRun = sandboxAvailable && providerAvailable && !busy;
+  const recordedOnly = capabilities?.executionProfile === "recorded_only";
 
   return (
     <section className="border-b border-zinc-200 bg-white" aria-labelledby="code-fix-launcher-title">
-      <div className="mx-auto grid max-w-[1800px] gap-5 px-4 py-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(360px,0.7fr)] lg:px-6 lg:py-8">
+      <div className={`mx-auto grid max-w-[1800px] gap-5 px-4 py-6 lg:px-6 lg:py-8 ${
+        recordedOnly ? "" : "lg:grid-cols-[minmax(0,1.3fr)_minmax(360px,0.7fr)]"
+      }`}>
         <div>
           <p className="font-mono text-xs font-semibold text-emerald-700">
             FLAGSHIP DEBUGGING STORY
@@ -93,11 +97,11 @@ export function CodeFixLauncher({
               Start 90-second demo
             </button>
             <a
-              href="/audit"
+              href="/case-study"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 active:translate-y-px"
             >
-              Open code audit workspace
-              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              Read the Case Study
+              <BookOpenText className="h-4 w-4" aria-hidden="true" />
             </a>
           </div>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
@@ -113,7 +117,7 @@ export function CodeFixLauncher({
           </div>
         </div>
 
-        <div className="border-l-2 border-emerald-600 bg-zinc-50 p-4">
+        {!recordedOnly ? <div className="border-l-2 border-emerald-600 bg-zinc-50 p-4">
           <div className="flex items-start gap-3">
             <Container className="mt-0.5 h-5 w-5 text-zinc-700" aria-hidden="true" />
             <div>
@@ -162,7 +166,7 @@ export function CodeFixLauncher({
                 "Checking local execution capabilities."}
             </p>
           ) : null}
-        </div>
+        </div> : null}
       </div>
     </section>
   );

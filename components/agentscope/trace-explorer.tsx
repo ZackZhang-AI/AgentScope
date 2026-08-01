@@ -35,7 +35,7 @@ import {
   getTimelineViewportBar,
 } from "@/lib/agentscope/presentation/trace-view";
 import type { SpanKind, SpanStatus } from "@/lib/agentscope/domain/span";
-import { SpanInspector } from "./span-inspector";
+import { SpanInspector, type InspectorTab } from "./span-inspector";
 import { DiagnosticsPanel } from "./diagnostics-panel";
 import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
 import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
@@ -51,6 +51,11 @@ type TraceExplorerProps = {
   onForkSpan: (spanId: string) => Promise<boolean>;
   parentProjection?: RunProjection;
   replayMode: "fixture" | "fork";
+  focusRequest?: {
+    spanId: string;
+    inspectorTab: InspectorTab;
+    nonce: number;
+  };
 };
 
 const kindIcon = {
@@ -89,9 +94,10 @@ export function TraceExplorer({
   onForkSpan,
   parentProjection,
   replayMode,
+  focusRequest,
 }: TraceExplorerProps) {
   const [cursor, setCursor] = useState<number | null>(null);
-  const [selectedSpanId, setSelectedSpanId] = useState<string>();
+  const [selectedSpanId, setSelectedSpanId] = useState<string | undefined>(focusRequest?.spanId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [forkTargetId, setForkTargetId] = useState<string>();
@@ -594,6 +600,10 @@ export function TraceExplorer({
               checkpoints={visibleProjection?.checkpoints ?? []}
               isForking={isForking}
               onRequestFork={setForkTargetId}
+              requestedView={focusRequest ? {
+                tab: focusRequest.inspectorTab,
+                nonce: focusRequest.nonce,
+              } : undefined}
             />
           </div>
           )}

@@ -8,7 +8,7 @@ import type { Span } from "@/lib/agentscope/domain/span";
 import { formatDuration, summarizeTokens } from "@/lib/agentscope/presentation/trace-view";
 import { ArtifactViewer } from "./artifact-viewer";
 
-type InspectorTab =
+export type InspectorTab =
   | "overview"
   | "input"
   | "output"
@@ -24,6 +24,7 @@ type SpanInspectorProps = {
   checkpoints: ReplayCheckpoint[];
   isForking: boolean;
   onRequestFork: (spanId: string) => void;
+  requestedView?: { tab: InspectorTab; nonce: number };
 };
 
 const tabs: { id: InspectorTab; label: string }[] = [
@@ -77,8 +78,9 @@ export function SpanInspector({
   checkpoints,
   isForking,
   onRequestFork,
+  requestedView,
 }: SpanInspectorProps) {
-  const [tab, setTab] = useState<InspectorTab>("overview");
+  const [tab, setTab] = useState<InspectorTab>(requestedView?.tab ?? "overview");
 
   if (!span) {
     return (

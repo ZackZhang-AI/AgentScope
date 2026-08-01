@@ -1,4 +1,4 @@
-import { Code2, ShieldCheck } from "lucide-react";
+import { BookOpenText, Code2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 type AppHeaderProps = {
@@ -13,15 +13,22 @@ export function AppHeader({ provider }: AppHeaderProps) {
           <ShieldCheck className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
+          <div className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
             AgentScope
-          </h1>
+          </div>
           <p className="max-w-3xl text-sm leading-6 text-zinc-600">
             HarnessLab Agent black box for trace replay, failure inspection and evaluation.
           </p>
         </div>
       </Link>
       <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Link
+          href="/case-study"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
+        >
+          <BookOpenText className="h-4 w-4" aria-hidden="true" />
+          Case Study
+        </Link>
         <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-700">
           Provider: <span className="font-medium capitalize text-zinc-950">{provider}</span>
         </span>
