@@ -24,8 +24,24 @@ async function expectStatus(path, expectedStatus) {
 
 await waitForServer();
 
-for (const path of ["/", "/demos/code-fix-loop", "/case-study"]) {
+for (const path of [
+  "/",
+  "/demos/code-fix-loop",
+  "/case-study",
+  "/audit",
+  "/zh",
+  "/zh/demos/code-fix-loop",
+  "/zh/case-study",
+  "/zh/audit",
+]) {
   await expectStatus(path, 200);
+}
+
+const englishPrefix = await fetch(`${baseUrl}/en/demos/code-fix-loop`, {
+  redirect: "manual",
+});
+if (![307, 308].includes(englishPrefix.status)) {
+  throw new Error(`/en redirect returned ${englishPrefix.status}, expected 307 or 308.`);
 }
 
 const capabilities = await (await expectStatus(

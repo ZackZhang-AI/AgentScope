@@ -11,7 +11,9 @@ export default defineConfig({
   webServer: {
     command: `npm.cmd run dev -- --port ${port}`,
     url: baseURL,
-    reuseExistingServer: process.env.PLAYWRIGHT_PORT === undefined,
+    reuseExistingServer:
+      process.env.PLAYWRIGHT_REUSE_SERVER === "1" ||
+      process.env.PLAYWRIGHT_PORT === undefined,
     timeout: 120000,
   },
   use: {

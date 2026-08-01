@@ -17,6 +17,14 @@ test("homepage and Case Study have no serious accessibility violations", async (
   await page.goto("/case-study");
   await expect(page.getByRole("heading", { name: /final answer cannot explain/ })).toBeVisible();
   await expectNoSeriousViolations(page, "case-study");
+
+  await page.goto("/zh");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expectNoSeriousViolations(page, "homepage-zh");
+
+  await page.goto("/zh/case-study");
+  await expect(page.getByRole("heading", { name: /只看最终答案/ })).toBeVisible();
+  await expectNoSeriousViolations(page, "case-study-zh");
 });
 
 test("Demo, Compare and Eval views have no serious accessibility violations", async ({ page }) => {
