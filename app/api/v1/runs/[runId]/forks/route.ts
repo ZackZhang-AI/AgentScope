@@ -6,7 +6,9 @@ import {
   createDecisionProvider,
   getCodeFixScenario,
   isDockerSandboxAvailable,
+  isSandboxExecutionEnabled,
   reserveIdempotentRun,
+  sandboxDisabledResponse,
 } from "@/lib/agentscope/execution";
 import {
   getArtifactStore,
@@ -35,6 +37,9 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ runId: string }> },
 ) {
+  if (!isSandboxExecutionEnabled()) {
+    return sandboxDisabledResponse();
+  }
   if (!process.env.DATABASE_URL) {
     return Response.json(
       {

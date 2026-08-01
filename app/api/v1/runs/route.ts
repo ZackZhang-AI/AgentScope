@@ -8,7 +8,9 @@ import {
   createDecisionProvider,
   getCodeFixScenario,
   isDockerSandboxAvailable,
+  isSandboxExecutionEnabled,
   reserveIdempotentRun,
+  sandboxDisabledResponse,
 } from "@/lib/agentscope/execution";
 import { getArtifactStore } from "@/lib/agentscope/infrastructure/postgres/database";
 import { createRunSseResponse } from "@/lib/agentscope/transport/run-sse-response";
@@ -95,6 +97,9 @@ export async function POST(request: Request) {
       },
       { status: 200 },
     );
+  }
+  if (!isSandboxExecutionEnabled()) {
+    return sandboxDisabledResponse();
   }
   if (!process.env.DATABASE_URL) {
     return Response.json(

@@ -1,6 +1,7 @@
 export * from "./code-fix-run-executor";
 export * from "./artifact-store";
 export * from "./contracts";
+export * from "./execution-profile";
 export * from "./fixture-decision-provider";
 export * from "./model-decision-provider";
 export * from "./memory-workspace";

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { GET as getDemo } from "../app/api/v1/code-fix-demo/route";
 import { POST as createRun } from "../app/api/v1/runs/route";
 import { GET as getArtifact } from "../app/api/v1/artifacts/[artifactId]/route";
+import { resolveCapabilities } from "../app/api/v1/system/capabilities/route";
+import { POST as forkRun } from "../app/api/v1/runs/[runId]/forks/route";
 import {
   reserveIdempotentRun,
   resetIdempotencyForTests,
@@ -68,5 +70,73 @@ describe("code-fix portfolio APIs", () => {
 
     expect(first.duplicate).toBe(false);
     expect(second).toEqual({ runId: first.runId, duplicate: true });
+  });
+
+  it("fails closed without probing Docker in recorded-only deployments", async () => {
+    let dockerChecks = 0;
+    const capabilities = await resolveCapabilities(
+      {
+        AGENTSCOPE_EXECUTION_PROFILE: "recorded_only",
+        DATABASE_URL: "postgresql://configured-but-disabled",
+        DEEPSEEK_API_KEY: "configured-but-disabled",
+      },
+      async () => {
+        dockerChecks += 1;
+        return true;
+      },
+    );
+
+    expect(dockerChecks).toBe(0);
+    expect(capabilities).toMatchObject({
+      executionProfile: "recorded_only",
+      sandbox: { available: false, docker: false },
+      providers: {
+        fixture: { available: false },
+        deepseek: { available: false },
+        minimax: { available: false },
+      },
+    });
+  });
+
+  it("rejects sandbox creation and forks with a stable deployment error", async () => {
+    const previous = process.env.AGENTSCOPE_EXECUTION_PROFILE;
+    process.env.AGENTSCOPE_EXECUTION_PROFILE = "recorded_only";
+    try {
+      const runResponse = await createRun(
+        new Request("http://localhost/api/v1/runs", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            taskType: "code_fix",
+            scenarioId: "buggy-auth-api",
+            executionMode: "sandbox",
+            decisionProvider: "fixture",
+          }),
+        }),
+      );
+      const forkResponse = await forkRun(
+        new Request("http://localhost/api/v1/runs/parent/forks", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ targetSpanId: "span" }),
+        }),
+        { params: Promise.resolve({ runId: "parent" }) },
+      );
+
+      expect(runResponse.status).toBe(503);
+      expect(forkResponse.status).toBe(503);
+      await expect(runResponse.json()).resolves.toMatchObject({
+        code: "SANDBOX_DISABLED",
+      });
+      await expect(forkResponse.json()).resolves.toMatchObject({
+        code: "SANDBOX_DISABLED",
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.AGENTSCOPE_EXECUTION_PROFILE;
+      } else {
+        process.env.AGENTSCOPE_EXECUTION_PROFILE = previous;
+      }
+    }
   });
 });
