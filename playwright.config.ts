@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 60_000,
   workers: process.env.CI ? 2 : 4,
   webServer: {
-    command: `npm.cmd run dev -- --port ${port}`,
+    command: `npm run dev -- --port ${port}`,
     url: baseURL,
     reuseExistingServer: process.env.PLAYWRIGHT_PORT === undefined,
     timeout: 120000,
