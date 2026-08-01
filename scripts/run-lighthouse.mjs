@@ -39,18 +39,16 @@ mkdirSync(outputDirectory, { recursive: true });
 rmSync(profileDirectory, { recursive: true, force: true });
 
 const port = await waitForFreePort();
-const chrome = spawn(
-  chromium.executablePath(),
-  [
+const chrome = await chromium.launchPersistentContext(profileDirectory, {
+  channel: "chrome",
+  headless: true,
+  args: [
     "--headless=new",
     "--disable-gpu",
     "--no-first-run",
     `--remote-debugging-port=${port}`,
-    `--user-data-dir=${profileDirectory}`,
-    "about:blank",
   ],
-  { stdio: "ignore" },
-);
+});
 
 try {
   await waitForChrome(port);
@@ -74,5 +72,5 @@ try {
   });
   process.exitCode = exitCode;
 } finally {
-  chrome.kill();
+  await chrome.close();
 }
