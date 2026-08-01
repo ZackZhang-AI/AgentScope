@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { FileDiff, FileText } from "lucide-react";
 import type { Artifact } from "@/lib/agentscope/domain";
 import type { StoredArtifact } from "@/lib/agentscope/execution";
+import { useI18n } from "@/components/i18n-provider";
 
 export function ArtifactViewer({ artifacts }: { artifacts: Artifact[] }) {
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState(artifacts[0]?.id);
   const [artifact, setArtifact] = useState<StoredArtifact>();
   const [error, setError] = useState<string>();
@@ -20,7 +22,7 @@ export function ArtifactViewer({ artifacts }: { artifacts: Artifact[] }) {
     fetch(`/api/v1/artifacts/${encodeURIComponent(id)}`)
       .then(async (response) => {
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Artifact could not be loaded.");
+        if (!response.ok) throw new Error(payload.error ?? t("artifact.loadError"));
         return payload.artifact as StoredArtifact;
       })
       .then((value) => {
@@ -31,16 +33,16 @@ export function ArtifactViewer({ artifacts }: { artifacts: Artifact[] }) {
       })
       .catch((reason) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : "Artifact could not be loaded.");
+          setError(reason instanceof Error ? reason.message : t("artifact.loadError"));
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [activeId]);
+  }, [activeId, t]);
 
   if (artifacts.length === 0) {
-    return <p className="p-4 text-sm text-zinc-500">No artifacts captured for this span.</p>;
+    return <p className="p-4 text-sm text-zinc-500">{t("artifact.none")}</p>;
   }
 
   return (
@@ -68,7 +70,7 @@ export function ArtifactViewer({ artifacts }: { artifacts: Artifact[] }) {
       </div>
       {error ? <p className="p-4 text-xs text-red-700">{error}</p> : null}
       {!error && !artifact ? (
-        <p className="p-4 text-xs text-zinc-500">Loading artifact content.</p>
+        <p className="p-4 text-xs text-zinc-500">{t("artifact.loading")}</p>
       ) : null}
       {artifact?.mediaType === "text/x-diff" ? (
         <pre className="max-h-[420px] overflow-auto bg-zinc-950 p-3 font-mono text-[11px] leading-5">

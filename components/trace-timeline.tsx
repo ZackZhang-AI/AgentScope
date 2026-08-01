@@ -1,5 +1,8 @@
+"use client";
+
 import { AlertCircle, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import type { AgentEvent } from "@/lib/types";
+import { useI18n } from "@/components/i18n-provider";
 
 type TraceTimelineProps = {
   events: AgentEvent[];
@@ -15,6 +18,7 @@ const statusIcon = {
 };
 
 export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
+  const { t } = useI18n();
   const displayEvents =
     events.length > 0
       ? events
@@ -23,10 +27,10 @@ export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
             id: "intake",
             stage: "intake",
             status: isRunning ? "running" : "pending",
-            title: isRunning ? "Audit starting" : "Waiting for input",
+            title: isRunning ? t("audit.starting") : t("audit.waitingInput"),
             detail: isRunning
-              ? "The audit request is being routed through the provider layer."
-              : "Choose a sample or paste code, then run the audit.",
+              ? t("audit.routingRequest")
+              : t("audit.chooseInput"),
             timestamp: new Date(0).toISOString(),
           } satisfies AgentEvent,
         ];
@@ -35,8 +39,8 @@ export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-950">Harness Trace</h2>
-          <p className="mt-1 text-sm text-zinc-600">Observable agent stages from intake to report.</p>
+          <h2 className="text-sm font-semibold text-zinc-950">{t("trace.title")}</h2>
+          <p className="mt-1 text-sm text-zinc-600">{t("audit.traceDescription")}</p>
         </div>
       </div>
       <ol className="grid gap-3">

@@ -19,6 +19,7 @@ import type {
 import { consumeRunStream } from "@/lib/client/run-stream";
 import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
 import type { InspectorTab } from "./span-inspector";
+import { useI18n } from "@/components/i18n-provider";
 
 type CodeFixWorkbenchProps = {
   initialRunId?: string;
@@ -34,13 +35,13 @@ function appendEvent(events: TraceEvent[], event: TraceEvent) {
   );
 }
 
-async function fetchStoredRun(runId: string) {
+async function fetchStoredRun(runId: string, failureMessage: string) {
   const [runResponse, eventsResponse] = await Promise.all([
     fetch(`/api/v1/runs/${encodeURIComponent(runId)}`),
     fetch(`/api/v1/runs/${encodeURIComponent(runId)}/events?after=0`),
   ]);
   if (!runResponse.ok || !eventsResponse.ok) {
-    throw new Error("The persisted run could not be loaded.");
+    throw new Error(failureMessage);
   }
   const runPayload = await runResponse.json() as { trace: RunProjection };
   const eventPayload = await eventsResponse.json() as { events: TraceEvent[] };
@@ -51,6 +52,7 @@ export function CodeFixWorkbench({
   initialRunId,
   autoStartDemo = false,
 }: CodeFixWorkbenchProps) {
+  const { localizedPath, t } = useI18n();
   const mainRef = useRef<HTMLElement>(null);
   const [capabilities, setCapabilities] = useState<AgentScopeCapabilities>();
   const [provider, setProvider] =
@@ -74,7 +76,7 @@ export function CodeFixWorkbench({
     setError(undefined);
     try {
       const response = await fetch("/api/v1/code-fix-demo");
-      if (!response.ok) throw new Error("Recorded code-fix demo could not be loaded.");
+      if (!response.ok) throw new Error(t("workbench.recordedDemoError"));
       const payload = await response.json() as RecordedCodeFixDemo;
       setDemo(payload);
       setMode("recorded");
@@ -84,13 +86,13 @@ export function CodeFixWorkbench({
       setFocusRequest(undefined);
       setActiveResult(payload.parent.result);
       setEvents(payload.parent.events);
-      window.history.replaceState(null, "", "/demos/code-fix-loop");
+      window.history.replaceState(null, "", localizedPath("/demos/code-fix-loop"));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Demo could not be loaded.");
+      setError(reason instanceof Error ? reason.message : t("workbench.demoLoadError"));
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [localizedPath, t]);
 
   useEffect(() => {
     mainRef.current?.setAttribute("data-hydrated", "true");
@@ -106,7 +108,7 @@ export function CodeFixWorkbench({
     void fetch("/api/v1/code-fix-demo")
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Recorded code-fix demo could not be loaded.");
+          throw new Error(t("workbench.recordedDemoError"));
         }
         return response.json() as Promise<RecordedCodeFixDemo>;
       })
@@ -126,7 +128,7 @@ export function CodeFixWorkbench({
           setError(
             reason instanceof Error
               ? reason.message
-              : "Demo could not be loaded.",
+              : t("workbench.demoLoadError"),
           );
         }
       })
@@ -136,12 +138,12 @@ export function CodeFixWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [autoStartDemo]);
+  }, [autoStartDemo, t]);
 
   useEffect(() => {
     if (!initialRunId) return;
     let cancelled = false;
-    fetchStoredRun(initialRunId)
+    fetchStoredRun(initialRunId, t("workbench.persistedRunError"))
       .then(async ({ projection, events: storedEvents }) => {
         if (cancelled) return;
         setMode("sandbox");
@@ -156,13 +158,16 @@ export function CodeFixWorkbench({
         });
         setEvents(storedEvents);
         if (projection.run.parentRunId) {
-          const parent = await fetchStoredRun(projection.run.parentRunId);
+          const parent = await fetchStoredRun(
+            projection.run.parentRunId,
+            t("workbench.persistedRunError"),
+          );
           if (!cancelled) setParentProjection(parent.projection);
         }
       })
       .catch((reason) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : "Run could not be loaded.");
+          setError(reason instanceof Error ? reason.message : t("workbench.runLoadError"));
         }
       })
       .finally(() => {
@@ -171,7 +176,7 @@ export function CodeFixWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [initialRunId]);
+  }, [initialRunId, t]);
 
   async function consumeExecution(response: Response) {
     if (!response.ok) {
@@ -181,7 +186,7 @@ export function CodeFixWorkbench({
         ? await response.json() as { error?: string }
         : undefined;
       throw new Error(
-        payload?.error ?? `Agent execution failed (HTTP ${response.status}).`,
+        payload?.error ?? t("workbench.executionHttpError", { status: response.status }),
       );
     }
     let result: CodeFixRunResult | undefined;
@@ -194,13 +199,13 @@ export function CodeFixWorkbench({
         window.history.replaceState(
           null,
           "",
-          `/runs/${encodeURIComponent(message.result.id)}`,
+          localizedPath(`/runs/${encodeURIComponent(message.result.id)}`),
         );
       } else if (message.type === "error") {
         setError(message.error);
       }
     });
-    if (!result) throw new Error("Agent stream completed without a run result.");
+    if (!result) throw new Error(t("workbench.missingResult"));
     return result;
   }
 
@@ -231,7 +236,7 @@ export function CodeFixWorkbench({
       });
       await consumeExecution(response);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Sandbox run failed.");
+      setError(reason instanceof Error ? reason.message : t("workbench.sandboxError"));
     } finally {
       setBusy(false);
     }
@@ -246,14 +251,18 @@ export function CodeFixWorkbench({
       if (mode === "recorded") {
         if (!demo || demo.child.result.trace.run.forkedFromSpanId !== spanId) {
           throw new Error(
-            "The recorded branch starts from the first no-progress test span.",
+            t("workbench.recordedBranchError"),
           );
         }
         setParentProjection(parent);
         setActiveResult(demo.child.result);
         setEvents(demo.child.events);
         setGuideStep("verified");
-        window.history.replaceState(null, "", "/demos/code-fix-loop?view=verified");
+        window.history.replaceState(
+          null,
+          "",
+          localizedPath("/demos/code-fix-loop?view=verified"),
+        );
         return true;
       }
 
@@ -278,7 +287,7 @@ export function CodeFixWorkbench({
       setGuideStep("verified");
       return true;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Fork failed.");
+      setError(reason instanceof Error ? reason.message : t("workbench.forkError"));
       return false;
     } finally {
       setBusy(false);
@@ -358,17 +367,20 @@ export function CodeFixWorkbench({
               <div>
                 <h2 className="text-sm font-semibold text-zinc-950">
                   {guideStep === "failure"
-                    ? "Failure: the parent ends after repeating the same test"
+                    ? t("workbench.failureTitle")
                     : guideStep === "root-cause"
-                      ? "Root cause: workspace and test hashes never changed"
-                      : "Fork: restore the safe checkpoint into a new child run"}
+                      ? t("workbench.rootCauseTitle")
+                      : t("workbench.forkTitle")}
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-zinc-600">
                   {guideStep === "failure"
-                    ? "Inspect the earliest failed run_tests span before following the error chain."
+                    ? t("workbench.failureDescription")
                     : guideStep === "root-cause"
-                      ? `no-progress-loop · confidence ${Math.round((noProgressDiagnostic?.confidence ?? 0) * 100)}% · evidence ${noProgressSpanId ?? "unavailable"}`
-                      : "The Replay tab shows checkpoint completeness and policy checks. Fork creates a child without changing Parent events or workspace state."}
+                      ? t("workbench.rootCauseDescription", {
+                          confidence: Math.round((noProgressDiagnostic?.confidence ?? 0) * 100),
+                          spanId: noProgressSpanId ?? t("workbench.unavailable"),
+                        })
+                      : t("workbench.forkDescription")}
                 </p>
               </div>
               {guideStep !== "fork" ? (
@@ -377,12 +389,14 @@ export function CodeFixWorkbench({
                   onClick={() => selectGuideStep(guideStep === "failure" ? "root-cause" : "fork")}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-100"
                 >
-                  {guideStep === "failure" ? "Locate root cause" : "Inspect safe checkpoint"}
+                  {guideStep === "failure"
+                    ? t("workbench.locateRootCause")
+                    : t("workbench.inspectCheckpoint")}
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900">
-                  Inspector Replay
+                  {t("workbench.inspectorReplay")}
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </span>
               )}
@@ -413,11 +427,10 @@ export function CodeFixWorkbench({
           <section className="flex min-h-80 items-center justify-center border border-dashed border-zinc-300 bg-white p-8 text-center">
             <div className="max-w-md">
               <h2 className="text-lg font-semibold text-zinc-950">
-                Choose how to inspect the code-repair agent
+                {t("workbench.emptyTitle")}
               </h2>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                The recorded path is always available. Local sandbox execution
-                appears when PostgreSQL and Docker are ready.
+                {t("workbench.emptyDescription")}
               </p>
             </div>
           </section>

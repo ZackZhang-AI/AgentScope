@@ -21,7 +21,7 @@ export function LocaleSwitcher() {
     <div
       className="inline-flex rounded-lg border border-zinc-300 bg-zinc-50 p-1 text-xs font-semibold"
       role="group"
-      aria-label="Language"
+      aria-label={t("language.label")}
     >
       {(["en", "zh"] as const).map((target) => (
         <Link

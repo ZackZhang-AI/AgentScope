@@ -26,44 +26,40 @@ export async function generateMetadata({
   if (!hasLocale(locale)) return {};
   const dictionary = await getDictionary(locale);
   return {
-  metadataBase: siteUrl,
-  title: {
-    default: dictionary["meta.title"],
-    template: "%s | AgentScope",
-  },
-  description: dictionary["meta.description"],
-  keywords: [
-    "AI agents",
-    "agent observability",
-    "agent evaluation",
-    "trace replay",
-    "developer tools",
-  ],
-  authors: [{ name: "Zack Zhang", url: "https://github.com/ZackZhang-AI" }],
-  creator: "Zack Zhang",
-  alternates: {
-    canonical: locale === "zh" ? "/zh" : "/",
-    languages: { en: "/", "zh-CN": "/zh" },
-  },
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: "AgentScope",
-    title: "AgentScope | AI Agent Black Box Replay",
-    description: dictionary["meta.openGraphDescription"],
-    images: [{
-      url: "/agentscope-social-card.png",
-      width: 1200,
-      height: 630,
-      alt: "AgentScope agent execution trace from failure loop to verified success",
-    }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "AgentScope | AI Agent Black Box Replay",
-    description: dictionary["meta.openGraphDescription"],
-    images: ["/agentscope-social-card.png"],
-  },
+    metadataBase: siteUrl,
+    title: {
+      default: dictionary["meta.title"],
+      template: "%s | AgentScope",
+    },
+    description: dictionary["meta.description"],
+    keywords: [
+      "AI agents",
+      "agent observability",
+      "agent evaluation",
+      "trace replay",
+      "developer tools",
+    ],
+    authors: [{ name: "Zack Zhang", url: "https://github.com/ZackZhang-AI" }],
+    creator: "Zack Zhang",
+    openGraph: {
+      type: "website",
+      url: locale === "zh" ? "/zh" : "/",
+      siteName: "AgentScope",
+      title: dictionary["meta.title"],
+      description: dictionary["meta.openGraphDescription"],
+      images: [{
+        url: "/agentscope-social-card.png",
+        width: 1200,
+        height: 630,
+        alt: dictionary["meta.socialAlt"],
+      }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: dictionary["meta.title"],
+      description: dictionary["meta.openGraphDescription"],
+      images: ["/agentscope-social-card.png"],
+    },
   };
 }
 

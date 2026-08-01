@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FlaskConical, GitCompareArrows, RotateCcw } from "lucide-react";
 import type { DemoRun } from "@/lib/agentscope/fixtures/catalog";
+import { useI18n } from "@/components/i18n-provider";
 
 type DemoRunLibraryProps = {
   onLoad: (run: DemoRun, parent?: DemoRun) => void;
@@ -15,6 +16,7 @@ const icon = {
 };
 
 export function DemoRunLibrary({ onLoad }: DemoRunLibraryProps) {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -23,16 +25,16 @@ export function DemoRunLibrary({ onLoad }: DemoRunLibraryProps) {
     setError(undefined);
     try {
       const response = await fetch("/api/v1/demo-runs");
-      if (!response.ok) throw new Error("Demo catalog could not be loaded.");
+      if (!response.ok) throw new Error(t("library.loadError"));
       const payload = await response.json() as { runs: DemoRun[] };
       const run = payload.runs.find((item) => item.slug === slug);
-      if (!run) throw new Error("Requested demo run was not found.");
+      if (!run) throw new Error(t("library.notFound"));
       const parent = run.result.trace.run.parentRunId
         ? payload.runs.find((item) => item.result.id === run.result.trace.run.parentRunId)
         : undefined;
       onLoad(run, parent);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Demo catalog could not be loaded.");
+      setError(loadError instanceof Error ? loadError.message : t("library.loadError"));
     } finally {
       setIsLoading(false);
     }
@@ -41,18 +43,18 @@ export function DemoRunLibrary({ onLoad }: DemoRunLibraryProps) {
   const demos: { slug: DemoRun["slug"]; label: string; detail: string }[] = [
     {
       slug: "successful-code-audit",
-      label: "Successful trace",
-      detail: "Nested model, tool, artifact and token data.",
+      label: t("library.successTitle"),
+      detail: t("library.successDetail"),
     },
     {
       slug: "failed-repeated-tool",
-      label: "Repeated tool failure",
-      detail: "Three identical failures with a replay checkpoint.",
+      label: t("library.failureTitle"),
+      detail: t("library.failureDetail"),
     },
     {
       slug: "forked-successful-code-audit",
-      label: "Fork recovery compare",
-      detail: "Fixed child run aligned against its failed parent.",
+      label: t("library.forkTitle"),
+      detail: t("library.forkDetail"),
     },
   ];
 
@@ -60,10 +62,10 @@ export function DemoRunLibrary({ onLoad }: DemoRunLibraryProps) {
     <section className="rounded-lg border border-zinc-200 bg-white p-4" aria-labelledby="demo-runs-title">
       <div className="flex items-center gap-2">
         <FlaskConical className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-        <h2 id="demo-runs-title" className="text-sm font-semibold text-zinc-950">Black-box demos</h2>
+        <h2 id="demo-runs-title" className="text-sm font-semibold text-zinc-950">{t("library.title")}</h2>
       </div>
       <p className="mt-1 text-xs leading-5 text-zinc-500">
-        Fixed offline traces. No model key or network data source required.
+        {t("library.description")}
       </p>
       <div className="mt-3 grid gap-2">
         {demos.map((demo) => {

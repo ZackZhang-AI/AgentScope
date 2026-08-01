@@ -15,14 +15,9 @@ import type {
   Provider,
 } from "@/lib/types";
 import { sampleList } from "@/lib/samples";
+import { useI18n } from "@/components/i18n-provider";
 
-const auditRules: Array<{ value: AuditRule; label: string }> = [
-  { value: "security", label: "Security" },
-  { value: "reliability", label: "Reliability" },
-  { value: "testing", label: "Testing" },
-  { value: "maintainability", label: "Maintainability" },
-  { value: "performance", label: "Performance" },
-];
+const auditRules: AuditRule[] = ["security", "reliability", "testing", "maintainability", "performance"];
 
 type InputPanelProps = {
   content: string;
@@ -65,12 +60,13 @@ export function InputPanel({
   onRun,
   onReset,
 }: InputPanelProps) {
+  const { t } = useI18n();
   return (
     <section className="flex min-h-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4">
       <div>
-        <h2 className="text-sm font-semibold text-zinc-950">Input Control</h2>
+        <h2 className="text-sm font-semibold text-zinc-950">{t("audit.inputControl")}</h2>
         <p className="mt-1 text-sm leading-6 text-zinc-600">
-          Paste a diff or file snippet, then run the audit harness.
+          {t("audit.inputDescription")}
         </p>
       </div>
 
@@ -86,14 +82,14 @@ export function InputPanel({
             }`}
             onClick={() => onInputTypeChange(type)}
           >
-            {type === "diff" ? "Diff" : "File Snippets"}
+            {type === "diff" ? "Diff" : t("audit.fileSnippets")}
           </button>
         ))}
       </div>
 
       <div className="grid gap-2">
         <label className="text-sm font-medium text-zinc-800" htmlFor="pr-url">
-          Public GitHub PR
+          {t("audit.publicPr")}
         </label>
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <input
@@ -106,8 +102,8 @@ export function InputPanel({
           />
           <button
             type="button"
-            aria-label="Import pull request"
-            title="Import public pull request"
+            aria-label={t("audit.importPr")}
+            title={t("audit.importPr")}
             onClick={onImportPullRequest}
             disabled={isImporting || !pullRequestUrl.trim()}
             className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
@@ -121,27 +117,27 @@ export function InputPanel({
         </div>
         {source?.kind === "github-pr" ? (
           <p className="truncate text-xs text-emerald-700">
-            Imported from {source.url}
+            {t("audit.importedFrom", { url: source.url ?? "" })}
           </p>
         ) : null}
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-zinc-800">
-        Code input
+        {t("audit.codeInput")}
         <textarea
-          aria-label="Code input"
+          aria-label={t("audit.codeInput")}
           value={content}
           onChange={(event) => onContentChange(event.target.value)}
           spellCheck={false}
           className="min-h-[260px] resize-y rounded-lg border border-zinc-300 bg-zinc-950 p-3 font-mono text-xs leading-5 text-zinc-50 outline-none transition placeholder:text-zinc-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-          placeholder="Paste a diff or file snippet here..."
+          placeholder={t("audit.codePlaceholder")}
         />
       </label>
 
       <div className="grid gap-2">
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
           <FlaskConical className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-          Samples
+          {t("audit.samples")}
         </div>
         <div className="grid gap-2">
           {sampleList.map((sample) => (
@@ -169,45 +165,45 @@ export function InputPanel({
             onChange={(event) => onProviderChange(event.target.value as Provider)}
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           >
-            <option value="mock">Mock Demo</option>
+            <option value="mock">{t("audit.mockDemo")}</option>
             <option value="deepseek">DeepSeek</option>
             <option value="minimax">MiniMax</option>
           </select>
         </label>
         <label className="grid gap-2 text-sm font-medium text-zinc-800">
-          Intensity
+          {t("audit.intensity")}
           <select
             aria-label="Intensity"
             value={intensity}
             onChange={(event) => onIntensityChange(event.target.value as Intensity)}
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           >
-            <option value="quick">Quick</option>
-            <option value="standard">Standard</option>
+            <option value="quick">{t("audit.quick")}</option>
+            <option value="standard">{t("audit.standard")}</option>
           </select>
         </label>
       </div>
 
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium text-zinc-800">Audit rules</legend>
+        <legend className="text-sm font-medium text-zinc-800">{t("audit.rules")}</legend>
         <div className="grid grid-cols-2 gap-2">
           {auditRules.map((rule) => (
             <label
-              key={rule.value}
+              key={rule}
               className="flex min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700"
             >
               <input
                 type="checkbox"
-                checked={rules.includes(rule.value)}
+                checked={rules.includes(rule)}
                 onChange={(event) => {
                   const next = event.target.checked
-                    ? [...rules, rule.value]
-                    : rules.filter((value) => value !== rule.value);
+                    ? [...rules, rule]
+                    : rules.filter((value) => value !== rule);
                   if (next.length) onRulesChange(next);
                 }}
                 className="h-4 w-4 accent-emerald-700"
               />
-              <span className="truncate">{rule.label}</span>
+              <span className="truncate">{t(`audit.rule.${rule}`)}</span>
             </label>
           ))}
         </div>
@@ -216,8 +212,8 @@ export function InputPanel({
       {provider !== "mock" ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
           {provider === "deepseek"
-            ? "DeepSeek requires DEEPSEEK_API_KEY on the server."
-            : "MiniMax requires MINIMAX_API_KEY on the server."}
+            ? t("audit.deepseekKey")
+            : t("audit.minimaxKey")}
         </p>
       ) : null}
 
@@ -229,13 +225,13 @@ export function InputPanel({
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 active:translate-y-px disabled:cursor-not-allowed disabled:bg-zinc-400"
         >
           <Play className="h-4 w-4" aria-hidden="true" />
-          {isRunning ? "Running" : "Run Audit"}
+          {isRunning ? t("trace.running") : t("audit.run")}
         </button>
         <button
           type="button"
           onClick={onReset}
           className="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-3 text-zinc-700 transition hover:bg-zinc-50 active:translate-y-px"
-          aria-label="Reset input"
+          aria-label={t("audit.reset")}
         >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
         </button>

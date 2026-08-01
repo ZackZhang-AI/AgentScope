@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import type { RunProjection } from "@/lib/agentscope/domain";
 import { compareRuns } from "@/lib/agentscope/compare/compare-runs";
+import { useI18n } from "@/components/i18n-provider";
 
 type VerifiedFixSummaryProps = {
   parent: RunProjection;
@@ -18,41 +19,42 @@ export function VerifiedFixSummary({
   child,
   onRestart,
 }: VerifiedFixSummaryProps) {
+  const { localizedPath, t } = useI18n();
   const comparison = compareRuns(parent, child);
   const parentFacts = comparison.parentFacts;
   const childFacts = comparison.childFacts;
   const tokenDelta = parentFacts.totalTokens !== undefined && childFacts.totalTokens !== undefined
     ? signed(childFacts.totalTokens - parentFacts.totalTokens)
-    : "Not reported";
+    : t("verified.notReported");
 
   const facts = [
-    { label: "Target test", before: "Failed", after: "Passed", delta: "Verified" },
+    { label: t("verified.targetTest"), before: t("verified.failed"), after: t("verified.passed"), delta: t("verified.confirmed") },
     {
-      label: "Errors",
+      label: t("verified.errors"),
       before: parentFacts.errorCount,
       after: childFacts.errorCount,
       delta: signed(childFacts.errorCount - parentFacts.errorCount),
     },
     {
-      label: "Repeated calls",
+      label: t("verified.repeatedCalls"),
       before: parentFacts.duplicateToolCalls,
       after: childFacts.duplicateToolCalls,
       delta: signed(childFacts.duplicateToolCalls - parentFacts.duplicateToolCalls),
     },
     {
-      label: "Tool calls",
+      label: t("verified.toolCalls"),
       before: parentFacts.toolCalls,
       after: childFacts.toolCalls,
       delta: signed(childFacts.toolCalls - parentFacts.toolCalls),
     },
     {
-      label: "Reported tokens",
+      label: t("verified.reportedTokens"),
       before: parentFacts.totalTokens ?? "n/a",
       after: childFacts.totalTokens ?? "n/a",
       delta: tokenDelta,
     },
     {
-      label: "Latency",
+      label: t("verified.latency"),
       before: `${parentFacts.durationMs} ms`,
       after: `${childFacts.durationMs} ms`,
       delta: signed(childFacts.durationMs - parentFacts.durationMs, " ms"),
@@ -64,14 +66,14 @@ export function VerifiedFixSummary({
       <div className="flex flex-col gap-4 border-b border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
-            Deterministic comparison
+            {t("verified.eyebrow")}
           </p>
           <h2 id="verified-summary-title" className="mt-1 text-lg font-semibold text-zinc-950">
-            The child removed the failure without mutating its parent
+            {t("verified.title")}
           </h2>
         </div>
         <span className="font-mono text-xs text-emerald-900">
-          {comparison.outcomes.regressed.length} regressions detected
+          {t("verified.regressions", { count: comparison.outcomes.regressed.length })}
         </span>
       </div>
 
@@ -79,15 +81,15 @@ export function VerifiedFixSummary({
         className="overflow-x-auto"
         tabIndex={0}
         role="region"
-        aria-label="Parent and child measured facts"
+        aria-label={t("verified.regionLabel")}
       >
         <table className="w-full min-w-[640px] text-left text-xs">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
             <tr>
-              <th className="px-4 py-2 font-medium">Measured fact</th>
-              <th className="px-4 py-2 font-medium">Parent</th>
-              <th className="px-4 py-2 font-medium">Child</th>
-              <th className="px-4 py-2 font-medium">Change</th>
+              <th className="px-4 py-2 font-medium">{t("verified.measuredFact")}</th>
+              <th className="px-4 py-2 font-medium">{t("verified.parent")}</th>
+              <th className="px-4 py-2 font-medium">{t("verified.child")}</th>
+              <th className="px-4 py-2 font-medium">{t("verified.change")}</th>
             </tr>
           </thead>
           <tbody>
@@ -105,10 +107,10 @@ export function VerifiedFixSummary({
 
       <div className="flex flex-wrap gap-3 border-t border-zinc-200 p-4">
         <Link
-          href="/case-study"
+          href={localizedPath("/case-study")}
           className="inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 active:translate-y-px"
         >
-          View Case Study
+          {t("verified.viewCaseStudy")}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
         <button
@@ -117,7 +119,7 @@ export function VerifiedFixSummary({
           className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 active:translate-y-px"
         >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
-          Restart demo
+          {t("verified.restartDemo")}
         </button>
       </div>
     </section>

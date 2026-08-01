@@ -6,6 +6,7 @@ import type { RunProjection } from "@/lib/agentscope/domain/projection";
 import { compareRuns } from "@/lib/agentscope/compare/compare-runs";
 import { evaluateRun, evalReportToMarkdown } from "@/lib/agentscope/eval/evaluate-run";
 import { formatDuration } from "@/lib/agentscope/presentation/trace-view";
+import { useI18n } from "@/components/i18n-provider";
 
 type RunAnalysisPanelProps = {
   projection: RunProjection;
@@ -45,15 +46,38 @@ export function RunAnalysisPanel({
   parentProjection,
   onSelectSpan,
 }: RunAnalysisPanelProps) {
+  const { locale, t } = useI18n();
   const [tab, setTab] = useState<"compare" | "eval">(parentProjection ? "compare" : "eval");
   const comparison = useMemo(
     () => parentProjection ? compareRuns(parentProjection, projection) : undefined,
     [parentProjection, projection],
   );
   const report = useMemo(() => evaluateRun(projection), [projection]);
+  const localizedOutcomes = useMemo(() => {
+    if (!comparison || locale !== "zh") return comparison?.outcomes;
+    const resolved: string[] = [];
+    const regressed: string[] = [];
+    const tradeOffs: string[] = [];
+    if (parentProjection?.run.status === "error" && projection.run.status === "success") {
+      resolved.push(t("analysis.outcomeCompleted"));
+    }
+    const errorDelta = comparison.childFacts.errorCount - comparison.parentFacts.errorCount;
+    if (errorDelta < 0) resolved.push(t("analysis.outcomeErrorsRemoved", { count: -errorDelta }));
+    if (errorDelta > 0) regressed.push(t("analysis.outcomeErrorsAdded", { count: errorDelta }));
+    const duplicateDelta = comparison.childFacts.duplicateToolCalls - comparison.parentFacts.duplicateToolCalls;
+    if (duplicateDelta < 0) resolved.push(t("analysis.outcomeLoopReduced"));
+    if (duplicateDelta > 0) regressed.push(t("analysis.outcomeLoopAdded"));
+    const durationDelta = comparison.childFacts.durationMs - comparison.parentFacts.durationMs;
+    if (durationDelta > 0) tradeOffs.push(t("analysis.outcomeRuntime", { value: durationDelta }));
+    if (comparison.parentFacts.totalTokens !== undefined && comparison.childFacts.totalTokens !== undefined) {
+      const tokenDelta = comparison.childFacts.totalTokens - comparison.parentFacts.totalTokens;
+      if (tokenDelta > 0) tradeOffs.push(t("analysis.outcomeTokens", { value: tokenDelta }));
+    }
+    return { resolved, regressed, tradeOffs };
+  }, [comparison, locale, parentProjection?.run.status, projection.run.status, t]);
 
   return (
-    <section className="border-t border-zinc-200 bg-white" aria-label="Run analysis">
+    <section className="border-t border-zinc-200 bg-white" aria-label={t("analysis.ariaLabel")}>
       <div className="flex items-center gap-1 border-b border-zinc-200 bg-zinc-50 px-3">
         {comparison ? (
           <button
@@ -63,7 +87,7 @@ export function RunAnalysisPanel({
               tab === "compare" ? "border-emerald-600 text-emerald-800" : "border-transparent text-zinc-500"
             }`}
           >
-            Run Compare
+            {t("analysis.compare")}
           </button>
         ) : null}
         <button
@@ -73,7 +97,7 @@ export function RunAnalysisPanel({
             tab === "eval" ? "border-emerald-600 text-emerald-800" : "border-transparent text-zinc-500"
           }`}
         >
-          Eval Report
+          {t("analysis.evalReport")}
           <span className="ml-1 font-mono text-[9px] text-zinc-600">v1</span>
         </button>
       </div>
@@ -83,42 +107,46 @@ export function RunAnalysisPanel({
           <div>
             <div className="flex items-center gap-2">
               <GitCompareArrows className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-              <h3 className="text-xs font-semibold text-zinc-900">Parent vs child facts</h3>
+              <h3 className="text-xs font-semibold text-zinc-900">{t("analysis.parentChildFacts")}</h3>
             </div>
             <div className="mt-3 border-y border-zinc-200">
-              <Fact label="Run status" parent={parentProjection?.run.status} child={projection.run.status} />
-              <Fact label="Duration" parent={formatDuration(comparison.parentFacts.durationMs)} child={formatDuration(comparison.childFacts.durationMs)} />
-              <Fact label="Errors" parent={comparison.parentFacts.errorCount} child={comparison.childFacts.errorCount} />
-              <Fact label="Tool calls" parent={comparison.parentFacts.toolCalls} child={comparison.childFacts.toolCalls} />
-              <Fact label="Duplicate calls" parent={comparison.parentFacts.duplicateToolCalls} child={comparison.childFacts.duplicateToolCalls} />
-              <Fact label="Final output" parent="baseline" child={comparison.finalOutputChanged ? "changed" : "same"} />
-              <Fact label="Alignment" parent={`${comparison.unmatchedSpanCount} unmatched`} child={`${Math.round(comparison.alignmentConfidence * 100)}%`} />
+              <Fact label={t("analysis.runStatus")} parent={parentProjection?.run.status} child={projection.run.status} />
+              <Fact label={t("analysis.duration")} parent={formatDuration(comparison.parentFacts.durationMs)} child={formatDuration(comparison.childFacts.durationMs)} />
+              <Fact label={t("analysis.errors")} parent={comparison.parentFacts.errorCount} child={comparison.childFacts.errorCount} />
+              <Fact label={t("analysis.toolCalls")} parent={comparison.parentFacts.toolCalls} child={comparison.childFacts.toolCalls} />
+              <Fact label={t("analysis.duplicateCalls")} parent={comparison.parentFacts.duplicateToolCalls} child={comparison.childFacts.duplicateToolCalls} />
+              <Fact label={t("analysis.finalOutput")} parent={t("analysis.baseline")} child={comparison.finalOutputChanged ? t("analysis.changed") : t("analysis.same")} />
+              <Fact label={t("analysis.alignment")} parent={t("analysis.unmatched", { count: comparison.unmatchedSpanCount })} child={`${Math.round(comparison.alignmentConfidence * 100)}%`} />
               {comparison.parentFacts.totalTokens !== undefined && comparison.childFacts.totalTokens !== undefined ? (
-                <Fact label="Reported tokens" parent={comparison.parentFacts.totalTokens} child={comparison.childFacts.totalTokens} />
+                <Fact label={t("analysis.reportedTokens")} parent={comparison.parentFacts.totalTokens} child={comparison.childFacts.totalTokens} />
               ) : null}
             </div>
             <div className="mt-3">
-              <p className="text-[11px] font-semibold text-zinc-700">Factual summary</p>
+              <p className="text-[11px] font-semibold text-zinc-700">{t("analysis.factualSummary")}</p>
               <ul className="mt-1 grid gap-1 text-[11px] leading-4 text-zinc-500">
-                {comparison.summary.map((item) => <li key={item}>{item}</li>)}
+                {(locale === "zh" ? [
+                  t("analysis.summaryStatus", { parent: parentProjection?.run.status ?? "—", child: projection.run.status }),
+                  t("analysis.summaryErrors", { parent: comparison.parentFacts.errorCount, child: comparison.childFacts.errorCount }),
+                  t("analysis.summaryCalls", { parent: comparison.parentFacts.toolCalls, child: comparison.childFacts.toolCalls }),
+                ] : comparison.summary).map((item) => <li key={item}>{item}</li>)}
               </ul>
             </div>
             {projection.run.taskType === "code_fix" ? (
               <div className="mt-4 grid gap-3">
                 {[
                   {
-                    label: "Resolved",
-                    items: comparison.outcomes.resolved,
+                    label: t("analysis.resolved"),
+                    items: localizedOutcomes?.resolved ?? [],
                     style: "border-emerald-200 bg-emerald-50 text-emerald-900",
                   },
                   {
-                    label: "Regressed",
-                    items: comparison.outcomes.regressed,
+                    label: t("analysis.regressed"),
+                    items: localizedOutcomes?.regressed ?? [],
                     style: "border-red-200 bg-red-50 text-red-900",
                   },
                   {
-                    label: "Trade-off",
-                    items: comparison.outcomes.tradeOffs,
+                    label: t("analysis.tradeOff"),
+                    items: localizedOutcomes?.tradeOffs ?? [],
                     style: "border-amber-200 bg-amber-50 text-amber-900",
                   },
                 ].map((group) => (
@@ -127,7 +155,7 @@ export function RunAnalysisPanel({
                     <ul className="mt-1 grid gap-1 text-[11px] leading-4">
                       {(group.items.length > 0
                         ? group.items
-                        : ["No evidence in this category."]
+                        : [t("analysis.noEvidence")]
                       ).map((item) => <li key={item}>{item}</li>)}
                     </ul>
                   </div>
@@ -138,9 +166,9 @@ export function RunAnalysisPanel({
 
           <div className="min-w-0">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-xs font-semibold text-zinc-900">Aligned execution path</h3>
+              <h3 className="text-xs font-semibold text-zinc-900">{t("analysis.alignedPath")}</h3>
               <span className="font-mono text-[10px] text-zinc-500">
-                {comparison.path.filter((item) => item.status !== "unchanged").length} changed
+                {t("analysis.changedCount", { count: comparison.path.filter((item) => item.status !== "unchanged").length })}
               </span>
             </div>
             <div className="mt-3 max-h-72 overflow-auto rounded-md border border-zinc-200">
@@ -164,10 +192,10 @@ export function RunAnalysisPanel({
                     {item.status}
                   </span>
                   <span className="truncate text-xs text-zinc-500">
-                    {item.parentSpan?.name ?? "No parent step"}
+                    {item.parentSpan?.name ?? t("analysis.noParentStep")}
                   </span>
                   <span className="truncate text-xs font-medium text-zinc-900">
-                    {item.childSpan?.name ?? "No child step"}
+                    {item.childSpan?.name ?? t("analysis.noChildStep")}
                     <span className="ml-2 font-mono text-[9px] text-zinc-600">
                       {Math.round(item.confidence * 100)}%
                     </span>
@@ -184,22 +212,22 @@ export function RunAnalysisPanel({
           <div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-              <h3 className="text-xs font-semibold text-zinc-900">Measured facts</h3>
+              <h3 className="text-xs font-semibold text-zinc-900">{t("analysis.measuredFacts")}</h3>
             </div>
             <div className="mt-3 border-y border-zinc-200">
-              <Fact label="Status" child={report.measuredFacts.status} />
-              <Fact label="Spans" child={report.measuredFacts.spanCount} />
-              <Fact label="Errors" child={report.measuredFacts.errorCount} />
-              <Fact label="Tool success" child={`${report.measuredFacts.successfulToolCalls}/${report.measuredFacts.toolCalls}`} />
-              <Fact label="Duplicate calls" child={report.measuredFacts.duplicateToolCalls} />
-              <Fact label="Duration" child={formatDuration(report.measuredFacts.durationMs)} />
-              <Fact label="Tokens" child={report.measuredFacts.totalTokens ?? "Not reported"} />
+              <Fact label={t("analysis.status")} child={report.measuredFacts.status} />
+              <Fact label={t("analysis.spans")} child={report.measuredFacts.spanCount} />
+              <Fact label={t("analysis.errors")} child={report.measuredFacts.errorCount} />
+              <Fact label={t("analysis.toolSuccess")} child={`${report.measuredFacts.successfulToolCalls}/${report.measuredFacts.toolCalls}`} />
+              <Fact label={t("analysis.duplicateCalls")} child={report.measuredFacts.duplicateToolCalls} />
+              <Fact label={t("analysis.duration")} child={formatDuration(report.measuredFacts.durationMs)} />
+              <Fact label="Token" child={report.measuredFacts.totalTokens ?? t("analysis.notReported")} />
               {report.measuredFacts.codeFix ? (
                 <>
-                  <Fact label="Target tests" child={report.measuredFacts.codeFix.testPassed ? "passed" : "failed"} />
-                  <Fact label="Patch captured" child={report.measuredFacts.codeFix.patchCreated ? "yes" : "no"} />
-                  <Fact label="No-progress calls" child={report.measuredFacts.codeFix.noProgressCalls} />
-                  <Fact label="Safety violations" child={report.measuredFacts.codeFix.replaySafetyViolations} />
+                  <Fact label={t("analysis.targetTests")} child={report.measuredFacts.codeFix.testPassed ? t("analysis.passed") : t("analysis.failed")} />
+                  <Fact label={t("analysis.patchCaptured")} child={report.measuredFacts.codeFix.patchCreated ? t("analysis.yes") : t("analysis.no")} />
+                  <Fact label={t("analysis.noProgressCalls")} child={report.measuredFacts.codeFix.noProgressCalls} />
+                  <Fact label={t("analysis.safetyViolations")} child={report.measuredFacts.codeFix.replaySafetyViolations} />
                 </>
               ) : null}
             </div>
@@ -207,7 +235,7 @@ export function RunAnalysisPanel({
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-xs font-semibold text-zinc-900">Deterministic rule scores</h3>
+              <h3 className="text-xs font-semibold text-zinc-900">{t("analysis.ruleScores")}</h3>
               <span className="font-mono text-xs font-semibold text-zinc-900">
                 {report.overallScore}/100 {report.verdict}
               </span>
@@ -222,10 +250,10 @@ export function RunAnalysisPanel({
                   className="bg-white p-3 text-left hover:bg-zinc-50 disabled:cursor-default"
                 >
                   <span className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-zinc-900">{score.label}</span>
+                    <span className="text-xs font-semibold text-zinc-900">{locale === "zh" ? t(`analysis.score.${score.id}`) : score.label}</span>
                     <span className="font-mono text-sm font-semibold text-zinc-950">{score.score}</span>
                   </span>
-                  <span className="mt-1 block text-[11px] leading-4 text-zinc-500">{score.explanation}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-zinc-500">{locale === "zh" ? t("analysis.ruleEvidence", { count: score.evidenceSpanIds.length }) : score.explanation}</span>
                   <span className="mt-2 block font-mono text-[10px] text-emerald-700">deterministic_rule</span>
                 </button>
               ))}
@@ -233,12 +261,12 @@ export function RunAnalysisPanel({
           </div>
 
           <div>
-            <h3 className="text-xs font-semibold text-zinc-900">Limitations and export</h3>
+            <h3 className="text-xs font-semibold text-zinc-900">{t("analysis.limitationsExport")}</h3>
             <p className="mt-1 font-mono text-[10px] text-zinc-600">
               schema v{report.reportSchemaVersion} · trace seq {report.inputTraceSequence}
             </p>
             <ul className="mt-3 grid gap-2 text-[11px] leading-4 text-zinc-500">
-              {report.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}
+              {(locale === "zh" ? [t("analysis.limitationReasoning"), ...(report.measuredFacts.totalTokens === undefined ? [t("analysis.limitationTokens")] : [])] : report.limitations).map((limitation) => <li key={limitation}>{limitation}</li>)}
             </ul>
             <div className="mt-4 grid gap-2">
               <button
@@ -247,7 +275,7 @@ export function RunAnalysisPanel({
                 className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                Export Eval Markdown
+                {t("analysis.exportMarkdown")}
               </button>
               <button
                 type="button"
@@ -255,7 +283,7 @@ export function RunAnalysisPanel({
                 className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                Export Eval JSON
+                {t("analysis.exportJson")}
               </button>
             </div>
           </div>

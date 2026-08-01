@@ -7,6 +7,7 @@ import {
   RotateCw,
 } from "lucide-react";
 import type { Diagnostic } from "@/lib/agentscope/diagnostics/diagnose-run";
+import { useI18n } from "@/components/i18n-provider";
 
 type DiagnosticsPanelProps = {
   diagnostics: Diagnostic[];
@@ -23,10 +24,11 @@ const categoryIcon = {
 };
 
 export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanelProps) {
+  const { locale, t } = useI18n();
   if (diagnostics.length === 0) {
     return (
       <div className="border-t border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
-        Diagnostics: no deterministic issue detected.
+        {t("diagnostics.none")}
       </div>
     );
   }
@@ -34,9 +36,9 @@ export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanel
   return (
     <div className="border-t border-zinc-200 bg-zinc-50 p-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold text-zinc-900">Diagnostics</h3>
+        <h3 className="text-xs font-semibold text-zinc-900">{t("diagnostics.title")}</h3>
         <span className="font-mono text-[10px] text-zinc-500">
-          {diagnostics.length} findings
+          {t("diagnostics.findings", { count: diagnostics.length })}
         </span>
       </div>
       <div className="grid gap-px overflow-hidden rounded-md border border-zinc-200 bg-zinc-200 lg:grid-cols-2 2xl:grid-cols-4">
@@ -61,13 +63,17 @@ export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanel
               }`} aria-hidden="true" />
               <span className="min-w-0">
                 <span className="block text-xs font-semibold text-zinc-900">
-                  {diagnostic.title}
+                  {locale === "zh" && diagnostic.ruleId === "no-progress-loop"
+                    ? t("diagnostics.noProgressTitle")
+                    : diagnostic.title}
                 </span>
                 <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-zinc-500">
-                  {diagnostic.explanation}
+                  {locale === "zh" && diagnostic.ruleId === "no-progress-loop"
+                    ? t("diagnostics.noProgressExplanation")
+                    : diagnostic.explanation}
                 </span>
                 <span className="mt-1.5 block font-mono text-[10px] text-zinc-600">
-                  confidence {Math.round(diagnostic.confidence * 100)}%
+                  {t("diagnostics.confidence", { value: Math.round(diagnostic.confidence * 100) })} · {diagnostic.ruleId === "no-progress-loop" ? "no_progress_loop" : diagnostic.ruleId}
                 </span>
               </span>
             </button>

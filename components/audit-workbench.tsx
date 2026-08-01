@@ -28,6 +28,7 @@ import type {
   Intensity,
   Provider,
 } from "@/lib/types";
+import { useI18n } from "@/components/i18n-provider";
 
 const defaultRules: AuditRule[] = [
   "security",
@@ -37,6 +38,7 @@ const defaultRules: AuditRule[] = [
 ];
 
 export function AuditWorkbench() {
+  const { t } = useI18n();
   const firstSample = sampleList[0];
   const [content, setContent] = useState(firstSample.content);
   const [inputType, setInputType] = useState<InputType>(firstSample.inputType);
@@ -114,7 +116,7 @@ export function AuditWorkbench() {
 
       if (!response.ok) {
         const payload = await response.json();
-        throw new Error(payload.error ?? "Audit request failed.");
+        throw new Error(payload.error ?? t("audit.requestFailed"));
       }
 
       let streamError: string | null = null;
@@ -157,16 +159,16 @@ export function AuditWorkbench() {
         const recovery = await resumeInterruptedTrace(activeRunId, lastSequence);
         if (recovery.status === "terminal") {
           throw new Error(
-            `Connection interrupted. Trace ${activeRunId} was recovered through event ${recovery.lastSequence}, but the final report response was not delivered.`,
+            t("audit.recoveredNoReport", { runId: activeRunId, sequence: recovery.lastSequence }),
           );
         }
       }
       if (transportError) throw transportError;
       if (!resultReceived) {
-        throw new Error("Audit stream completed without a result.");
+        throw new Error(t("audit.noResult"));
       }
     } catch (auditError) {
-      const message = auditError instanceof Error ? auditError.message : "Audit request failed.";
+      const message = auditError instanceof Error ? auditError.message : t("audit.requestFailed");
       setError(message);
     } finally {
       setIsRunning(false);
@@ -176,7 +178,7 @@ export function AuditWorkbench() {
   async function forkFromSpan(spanId: string) {
     if (!result) {
       setError(
-        "This persisted trace does not include the original audit request required for a fork.",
+        t("audit.missingForkRequest"),
       );
       return false;
     }
@@ -188,7 +190,7 @@ export function AuditWorkbench() {
     try {
       if (activeDemo) {
         const response = await fetch("/api/v1/demo-runs");
-        if (!response.ok) throw new Error("Demo catalog could not be loaded.");
+        if (!response.ok) throw new Error(t("library.loadError"));
         const payload = await response.json() as { runs: DemoRun[] };
         const child = payload.runs.find(
           (demo) =>
@@ -196,7 +198,7 @@ export function AuditWorkbench() {
             demo.result.trace.run.forkedFromSpanId === spanId,
         );
         if (!child) {
-          throw new Error("No fixed fixture branch exists for this checkpoint.");
+          throw new Error(t("audit.noFixtureBranch"));
         }
 
         setTraceEvents(child.events);
@@ -232,7 +234,7 @@ export function AuditWorkbench() {
 
       if (!response.ok) {
         const payload = await response.json();
-        throw new Error(payload.error ?? "Fork request failed.");
+        throw new Error(payload.error ?? t("audit.forkFailed"));
       }
 
       setTraceEvents([]);
@@ -274,16 +276,16 @@ export function AuditWorkbench() {
         const recovery = await resumeInterruptedTrace(activeRunId, lastSequence);
         if (recovery.status === "terminal") {
           throw new Error(
-            `Connection interrupted. Child trace ${activeRunId} was recovered through event ${recovery.lastSequence}, but the final report response was not delivered.`,
+            t("audit.childRecoveredNoReport", { runId: activeRunId, sequence: recovery.lastSequence }),
           );
         }
       }
       if (transportError) throw transportError;
-      if (!childResult) throw new Error("Fork stream completed without a child run.");
+      if (!childResult) throw new Error(t("audit.noChildResult"));
       return true;
     } catch (forkError) {
       setError(
-        forkError instanceof Error ? forkError.message : "Fork request failed.",
+        forkError instanceof Error ? forkError.message : t("audit.forkFailed"),
       );
       return false;
     } finally {
@@ -302,7 +304,7 @@ export function AuditWorkbench() {
         body: JSON.stringify({ url: pullRequestUrl }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Pull request import failed.");
+      if (!response.ok) throw new Error(payload.error ?? t("audit.prImportFailed"));
 
       setContent(payload.content);
       setInputType("diff");
@@ -316,7 +318,7 @@ export function AuditWorkbench() {
       setError(
         importError instanceof Error
           ? importError.message
-          : "Pull request import failed.",
+          : t("audit.prImportFailed"),
       );
     } finally {
       setIsImporting(false);
