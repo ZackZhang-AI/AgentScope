@@ -58,7 +58,9 @@ describe("POST /api/audit", () => {
     const stream = await response.text();
 
     expect(response.headers.get("content-type")).toContain("text/event-stream");
-    expect(response.headers.get("x-agentscope-resumable")).toBe("false");
+    expect(response.headers.get("x-agentscope-resumable")).toBe(
+      process.env.DATABASE_URL ? "true" : "false",
+    );
     expect(stream).toContain("event: trace");
     expect(stream).toContain("event: trace_event");
     expect(stream).toContain("id: 1");

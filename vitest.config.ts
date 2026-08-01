@@ -10,5 +10,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // Integration files share the same PostgreSQL schema and clean it between cases.
+    // Keep files serial so one suite cannot delete another suite's active run.
+    fileParallelism: false,
   },
 });
