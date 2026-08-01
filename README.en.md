@@ -3,13 +3,13 @@
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
 
-**Live Demo: Production URL is added after deployment** · **Video: link is added after upload** · [Case Study source](./app/case-study/page.tsx)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
 
 [中文](./README.md) · [Architecture](./docs/architecture.zh-CN.md) · [Changelog](./CHANGELOG.md)
 
 AgentScope is an AI Agent black-box replay tool that traces tool calls, detects no-progress loops, forks immutable checkpoints, and verifies fixes with span-linked evidence.
 
-![AgentScope social cover](./public/agentscope-social-card.png)
+[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm)
 
 ## The 90-second story
 

@@ -75,7 +75,12 @@ export function VerifiedFixSummary({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="Parent and child measured facts"
+      >
         <table className="w-full min-w-[640px] text-left text-xs">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
             <tr>

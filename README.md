@@ -5,13 +5,13 @@
 [![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-**Live Demo：发布后写入 Production URL** · **Video：上传后写入视频链接** · [Case Study](./app/case-study/page.tsx)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
 
 [English](./README.en.md) · [求职展示材料](./docs/job-search-kit.zh-CN.md) · [架构说明](./docs/architecture.zh-CN.md) · [更新日志](./CHANGELOG.md)
 
 AgentScope 是一个 AI Agent 黑匣子回放器：追踪计划、模型决策、工具调用、延迟、Token、错误和 Artifact，定位无进展循环，从不可变 Checkpoint 创建 Child Run，并用 Span 证据验证修复。
 
-![AgentScope social cover](./public/agentscope-social-card.png)
+[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm)
 
 ## 90 秒旗舰演示
 
