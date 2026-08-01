@@ -69,7 +69,8 @@ describe("Trace Explorer performance fixture", () => {
       {
         locale: "en",
         dictionary: en,
-        children: createElement(TraceExplorer, {
+      },
+      createElement(TraceExplorer, {
           events: [],
           projection: thousandSpanProjection(),
           isRunning: false,
@@ -77,8 +78,7 @@ describe("Trace Explorer performance fixture", () => {
           isForking: false,
           onForkSpan: async () => true,
           replayMode: "fixture",
-        }),
-      },
+      }),
     ));
     const elapsedMs = performance.now() - startedAt;
 

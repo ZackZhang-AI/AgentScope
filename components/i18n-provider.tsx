@@ -23,7 +23,7 @@ export function I18nProvider({
   dictionary,
   locale,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   dictionary: Dictionary;
   locale: Locale;
 }) {
