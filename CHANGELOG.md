@@ -1,5 +1,16 @@
 # 更新日志
 
+## 0.3.1 - 2026-08-01
+
+- 新增 `recorded_only` 与 `local_sandbox` 执行配置，公开部署默认失败关闭
+- 将 90 秒进度条升级为可操作引导，直接聚焦失败 Span、无进展证据和 Replay 安全信息
+- 新增 Verified Fix 事实摘要与 `/case-study` 产品案例说明
+- 新增 recorded-only Production Smoke，覆盖页面、能力接口、沙箱拒绝和 Artifact 读取
+- 新增 axe 严重问题门禁与 Lighthouse 性能、可访问性、LCP 和 Console Error 预算
+- 新增桌面与移动端完整旗舰演示 E2E，并修复小屏 Trace 与 Inspector 的宽度约束
+- 新增自动录屏脚本、双语介绍、简历 Bullet、项目讲稿与面试 FAQ
+- 新增 1200×630 社交分享图、Open Graph、Twitter、robots 与 sitemap 元数据
+
 ## 0.3.0 - 2026-07-29
 
 - 新增通用多工具 Agent 执行器与结构化 Decision Provider

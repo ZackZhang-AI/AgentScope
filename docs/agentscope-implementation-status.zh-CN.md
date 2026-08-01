@@ -1,7 +1,7 @@
 # AgentScope 实现状态
 
-更新时间：2026-07-29
-当前版本：v0.3.0
+更新时间：2026-08-01
+当前版本：v0.3.1
 
 ## 已完成：代码修复黑匣子闭环
 
@@ -19,6 +19,18 @@
 - 桌面与移动端旗舰流程 E2E
 - 原 `/api/audit` 与 `/audit` 代码审计工作台兼容保留
 
+## 已完成：求职展示与公开部署
+
+- `recorded_only` Production Profile 与 `SANDBOX_DISABLED` 失败关闭
+- 可操作的 `Failure → Root cause → Fork → Verified fix` 引导
+- Parent/Child 测试、错误、重复调用、Token、延迟和工具调用摘要
+- `/case-study` 产品案例与首页/Header 入口
+- recorded-only Production Smoke 与公开 Artifact 读取验证
+- 首页、Demo、Compare、Eval、Case Study 的 axe 严重问题门禁
+- Lighthouse Performance ≥ 90、Accessibility ≥ 95、LCP ≤ 2.5 秒和 Console Error 预算
+- 自动录屏脚本、双语介绍、简历 Bullet、3/10 分钟讲稿与面试 FAQ
+- Open Graph、Twitter、robots、sitemap 和 1200×630 社交分享图
+
 ## 执行模式状态
 
 | 模式 | 状态 | 说明 |
@@ -27,6 +39,8 @@
 | Sandbox + Fixture | 可用 | 需要 PostgreSQL 与 Docker，真实执行固定工具 |
 | Sandbox + DeepSeek | 可用 | 额外需要 `DEEPSEEK_API_KEY` |
 | Sandbox + MiniMax | 可用 | 额外需要 `MINIMAX_API_KEY` |
+
+线上 Vercel Production 固定使用 `recorded_only`；`local_sandbox` 只用于可信本地环境。
 
 ## 已知边界
 

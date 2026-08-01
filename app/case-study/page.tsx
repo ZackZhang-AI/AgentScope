@@ -12,7 +12,7 @@ import { AppHeader } from "@/components/app-header";
 import { getRecordedCodeFixDemo } from "@/lib/agentscope/execution";
 
 export const metadata: Metadata = {
-  title: "Case Study | AgentScope",
+  title: "Case Study",
   description:
     "How AgentScope traces a stalled code-repair agent, forks an immutable checkpoint and verifies the child run with deterministic evidence.",
 };

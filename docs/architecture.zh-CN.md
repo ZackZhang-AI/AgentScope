@@ -11,6 +11,20 @@ AgentScope 的系统目标不是“展示更多日志”，而是保证四件事
 
 当前采用 Next.js + PostgreSQL 模块化单体。执行、持久化、分析和 UI 位于同一仓库，但通过领域接口隔离，避免把代码审计专用的 `AuditTraceSession` 扩张成通用 Runtime。
 
+公开部署与本地开发使用同一代码包，但由 `AGENTSCOPE_EXECUTION_PROFILE` 划分可信边界：
+
+```mermaid
+flowchart TD
+  DEPLOY["AgentScope deployment"] --> PROFILE{"Execution profile"}
+  PROFILE -->|recorded_only| PUBLIC["Vercel public portfolio"]
+  PROFILE -->|local_sandbox| LOCAL["Trusted local environment"]
+  PUBLIC --> REC["Recorded Parent / Child artifacts"]
+  PUBLIC --> DENY["Sandbox Run / Fork: SANDBOX_DISABLED"]
+  LOCAL --> PG["PostgreSQL trace and artifacts"]
+  LOCAL --> DOCKER["Docker sandbox"]
+  LOCAL --> PROVIDER["Fixture / DeepSeek / MiniMax"]
+```
+
 ## 2. 模块边界
 
 ```mermaid
@@ -95,12 +109,24 @@ Run 与 Fork 支持 `Idempotency-Key`。SSE 事件带稳定 sequence，客户端
 
 - `/`：旗舰入口与能力检测；
 - `/demos/code-fix-loop`：固定录制演示；
+- `/case-study`：产品、架构、安全与验证案例说明；
 - `/runs/:runId`：持久 Run 深链接；
 - `/audit`：原代码审计工作台。
 
 共享服务端事实以 Run Projection 为准，前端不引入新的全局状态库。
 
-## 7. 明确非目标
+## 7. 公开部署质量边界
+
+`recorded_only` 是 Production 默认值：
+
+- 能力接口不探测 Docker，所有 Live Provider 标记为不可用；
+- Sandbox Run 与 Fork 在数据库访问前返回稳定 `SANDBOX_DISABLED`；
+- 页面和录制 Artifact 不依赖数据库、Docker 或模型密钥；
+- Production Smoke 验证首页、Demo、Case Study、能力接口、拒绝路径和 Artifact；
+- axe 检查首页、Demo、Compare、Eval 与 Case Study；
+- Lighthouse 约束 Performance、Accessibility、LCP 和 Console Error。
+
+## 8. 明确非目标
 
 - 任意用户仓库或不可信代码执行；
 - 登录、RBAC、多租户、计费和团队协作；

@@ -1,65 +1,86 @@
-# AgentScope｜AI Agent 黑匣子回放器
+# AgentScope | AI Agent 黑匣子回放器
 
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-2563eb.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-[English](./README.en.md) · [更新日志](./CHANGELOG.md) · [架构说明](./docs/architecture.zh-CN.md) · [完整 PRD](./docs/agentscope-prd.zh-CN.md)
+**Live Demo：发布后写入 Production URL** · **Video：上传后写入视频链接** · [Case Study](./app/case-study/page.tsx)
 
-AgentScope 是 HarnessLab 的 Agent 可观察性扩展：它记录 Agent 的计划、模型决策、工具调用、输入输出、延迟、Token、错误和 Artifact，并把一次失败运行变成可定位、可分支、可比较、可验证的调试闭环。
+[English](./README.en.md) · [求职展示材料](./docs/job-search-kit.zh-CN.md) · [架构说明](./docs/architecture.zh-CN.md) · [更新日志](./CHANGELOG.md)
 
-旗舰案例是一条真实的代码修复 Agent 路径：读取代码、搜索符号、修改文件、运行测试；Parent Run 因错误策略陷入无进展测试循环，用户从安全 Checkpoint 创建 Child Run，应用新策略后通过测试，最后由 Compare 与 Eval 用 Span 证据证明修复有效。
+AgentScope 是一个 AI Agent 黑匣子回放器：追踪计划、模型决策、工具调用、延迟、Token、错误和 Artifact，定位无进展循环，从不可变 Checkpoint 创建 Child Run，并用 Span 证据验证修复。
 
-![AgentScope 代码修复黑匣子](./public/harnesslab-desktop.png)
+![AgentScope social cover](./public/agentscope-social-card.png)
 
-## v0.3.0 更新概览
+## 90 秒旗舰演示
 
-- **从审计工作台扩展为 Agent 黑匣子**：新增通用多工具执行器、结构化决策 Provider 与服务端工具白名单。
-- **形成失败修复闭环**：支持 Checkpoint、不可变 Parent、Child Fork、Replay Preflight，以及代码修复前后的 Compare 与 Eval。
-- **补齐真实执行边界**：内置固定代码修复场景，使用 Docker 非 root、禁网与资源限制沙箱运行 `read/search/patch/test`。
-- **让运行证据可追溯**：PostgreSQL 持久化 Trace、Run、分析和 Artifact，提供 Patch Diff、测试日志、Span 证据与永久 Run URL。
-- **提升故障恢复能力**：支持 SSE sequence 续传、事件去重、幂等创建/Fork，并自动收敛被进程中断的运行。
-- **兼顾演示与开发**：提供无需数据库、Docker、API Key 的 90 秒录制演示，同时保留确定性沙箱和真实模型沙箱。
+```text
+Failure → Root cause → Fork → Verified fix
+```
 
-完整版本记录见 [CHANGELOG.md](./CHANGELOG.md)。
+固定案例中的代码修复 Agent 会执行 `read_file`、`search_code`、`apply_patch` 和 `run_tests`。Parent 因错误策略连续运行相同测试，Workspace/Test Hash 保持不变；用户从安全 Checkpoint 创建 Child，新策略通过测试，Compare 与 Eval 再以证据 Span 验证结果。
 
-## 三种明确的执行模式
+![AgentScope trace explorer](./public/harnesslab-desktop.png)
 
-| 模式 | 用途 | 是否真实执行工具 | 依赖 |
+## v0.3.1 求职展示版
+
+- 公开环境使用 `recorded_only`，不探测 Docker、不展示 Live Provider，沙箱请求稳定返回 `SANDBOX_DISABLED`。
+- 四步引导直接聚焦首次失败、`no-progress-loop` 证据和 Replay 安全信息，成功后显示 Parent/Child 事实差异。
+- `/case-study` 解释 Hash 诊断、不可变 Fork、Docker 边界和确定性 Eval。
+- recorded-only Smoke、axe、Lighthouse、桌面与移动 E2E 进入 CI。
+- Lighthouse 预算：Performance ≥ 90、Accessibility ≥ 95、LCP ≤ 2.5 秒、无 Console Error。
+- 提供自动录屏脚本、双语介绍、简历 Bullet、3 分钟与 10 分钟讲稿及面试 FAQ。
+
+## 三种执行模式
+
+| 模式 | 是否执行真实工具 | 依赖 | 使用位置 |
 | --- | --- | --- | --- |
-| 录制回放 | 90 秒作品集演示、CI | 否，读取确定性运行包 | 无 |
-| 确定性沙箱 | 本地验证完整 Agent 循环 | 是，执行 `read/search/patch/test` | PostgreSQL、Docker |
-| 真实模型沙箱 | 观察 DeepSeek/MiniMax 决策 | 是，工具仍受服务端白名单约束 | PostgreSQL、Docker、API Key |
+| Recorded replay | 否，读取确定性运行包 | 无 | Vercel Production、CI、面试演示 |
+| Deterministic sandbox | 是，执行固定 `read/search/patch/test` | PostgreSQL、Docker | 可信本地环境 |
+| Live-model sandbox | 是，模型选择结构化白名单动作 | PostgreSQL、Docker、API Key | 可信本地环境 |
 
-录制回放不会伪装成真实重执行；沙箱和 Provider 不可用时，`/api/v1/system/capabilities` 会返回稳定原因，UI 仍保留录制入口。
+公开部署不配置数据库、Docker 或模型密钥。录制回放不会伪装成真实执行。
 
-## 核心能力
+## 架构
 
-- 通用 `RunExecutor`、结构化 `DecisionProvider`、`ToolRegistry` 与 `WorkspaceSandbox`
-- 固定 `buggy-auth-api` 场景，模型只能选择允许的动作，不能生成任意 Shell
-- Docker 非 root、禁网、只读挂载、CPU/内存/PID/超时限制
-- 不可变 Parent、Checkpoint Snapshot、Copy-on-Write Child Fork
-- Trace Tree、Timeline、可视化回放、Span Inspector 与永久 Run URL
-- Patch Diff Viewer、Test Log Viewer 与 PostgreSQL Artifact 存储
-- Secret 脱敏、单 Artifact 256KB、单 Run 1MB、内部 Snapshot 不进入导出
-- 首次失败、重复调用、Workspace/Test Hash 无变化的 `no_progress_loop` 诊断
-- `Resolved / Regressed / Trade-off` Compare 与代码修复专项确定性 Eval
-- SSE sequence 续传、事件去重、进程中断收敛和幂等创建/Fork
-- 原代码审计工作台继续保留在 `/audit`
+```mermaid
+flowchart LR
+  UI["Trace / Replay / Compare / Eval"] --> API["Versioned API + SSE"]
+  API --> EX["RunExecutor"]
+  EX --> DP["DecisionProvider"]
+  EX --> TR["ToolRegistry"]
+  TR --> WS["WorkspaceSandbox"]
+  WS --> DK["Docker Test Runner"]
+  EX --> EV["Append-only Trace"]
+  EX --> AR["ArtifactStore"]
+  EV --> PG["PostgreSQL"]
+  AR --> PG
+  EV --> AN["Diagnostics / Compare / Eval"]
+  AN --> UI
+```
+
+核心边界：
+
+- Provider 只能返回 Zod 校验后的动作，不能生成任意 Shell。
+- Scenario Manifest 固定可修改文件和测试命令。
+- Parent 事件追加写；Child 从 Snapshot Copy-on-Write 恢复。
+- Docker 非 root、禁网，并限制 CPU、内存、PID 和执行时间。
+- Artifact 持久化前脱敏，单个 256KB、单 Run 1MB，内部 Snapshot 默认不导出。
+- Compare 只输出 `Resolved / Regressed / Trade-off`，Eval 使用版本化确定性规则。
 
 ## 快速开始
 
-Node.js 22+：
+只体验录制演示：
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000`，点击 **Start 90-second demo**。该路径不需要数据库、Docker 或 API Key。
+打开 `http://localhost:3000`，点击 `Start 90-second demo`。不需要 Key、数据库或 Docker。
 
-启用本地沙箱：
+启用本地真实沙箱：
 
 ```bash
 docker compose up -d
@@ -68,48 +89,16 @@ npm run db:migrate
 npm run dev
 ```
 
-`.env.local` 至少需要：
+`.env.local`：
 
 ```bash
+AGENTSCOPE_EXECUTION_PROFILE=local_sandbox
 DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
-```
-
-真实模型可选配置：
-
-```bash
 DEEPSEEK_API_KEY=
-DEEPSEEK_MODEL=deepseek-v4-flash
 MINIMAX_API_KEY=
-MINIMAX_MODEL=MiniMax-M2.7
 ```
 
-密钥只在服务端读取，不进入浏览器、Trace、Artifact 或导出 Bundle。
-
-## 关键接口
-
-```text
-POST /api/v1/runs
-GET  /api/v1/runs/:runId/stream
-POST /api/v1/runs/:runId/replay-preflight
-POST /api/v1/runs/:runId/forks
-GET  /api/v1/artifacts/:artifactId
-GET  /api/v1/system/capabilities
-```
-
-创建请求：
-
-```json
-{
-  "taskType": "code_fix",
-  "scenarioId": "buggy-auth-api",
-  "executionMode": "sandbox",
-  "decisionProvider": "fixture"
-}
-```
-
-`recorded` 只允许 `fixture`；测试命令与可修改文件由服务端 Scenario Manifest 固定。
-
-## 质量验证
+## 质量门禁
 
 ```bash
 npm run typecheck
@@ -117,27 +106,28 @@ npm run lint
 npm test
 npm run eval
 npm run build
+npm run smoke:recorded
 npm run e2e
+npm run lighthouse
 npm audit --omit=dev
 ```
 
-数据库与真实沙箱验收：
+PostgreSQL 与 Docker 集成测试需要对应服务：
 
 ```bash
-$env:TEST_DOCKER_SANDBOX="1"; npm test -- tests/agentscope-workspace-sandbox.test.ts
 $env:TEST_DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; npm run test:postgres
-$env:DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; $env:E2E_SANDBOX="1"; npm run e2e -- e2e/code-fix-demo.spec.ts --project=chromium
+$env:TEST_DOCKER_SANDBOX="1"; npm test -- tests/agentscope-workspace-sandbox.test.ts
 ```
 
-## 架构边界
+## 明确边界
 
-当前版本是 Next.js + PostgreSQL 模块化单体。线上作品集默认使用安全录制数据，本地环境开放固定案例沙箱；不接受任意用户仓库，不包含登录/RBAC、团队协作、计费、批量实验、LLM-as-a-Judge、独立 Worker 或多租户生产隔离。
+当前是 Next.js + PostgreSQL 模块化单体，只执行仓库内置 `buggy-auth-api`。本版本不包含任意仓库执行、登录、RBAC、多租户、计费、Dataset、LLM-as-a-Judge、独立 Worker 或消息队列。
 
-更多信息：
-
+- [完整 PRD](./docs/agentscope-prd.zh-CN.md)
+- [架构说明](./docs/architecture.zh-CN.md)
 - [实现状态](./docs/agentscope-implementation-status.zh-CN.md)
 - [运行与安全手册](./docs/agentscope-operations.zh-CN.md)
-- [安全策略](./SECURITY.md)
+- [求职展示材料](./docs/job-search-kit.zh-CN.md)
 
 ## License
 

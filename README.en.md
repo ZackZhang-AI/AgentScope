@@ -1,48 +1,44 @@
-# AgentScope — AI Agent Black Box
+# AgentScope | AI Agent Black Box Replay
 
-[![Version](https://img.shields.io/badge/version-0.3.0-2563eb.svg)](./CHANGELOG.md)
+[![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
 
-[中文](./README.md) · [Changelog](./CHANGELOG.md) · [Architecture (Chinese)](./docs/architecture.zh-CN.md) · [PRD (Chinese)](./docs/agentscope-prd.zh-CN.md)
+**Live Demo: Production URL is added after deployment** · **Video: link is added after upload** · [Case Study source](./app/case-study/page.tsx)
 
-AgentScope extends HarnessLab with evidence-backed Agent observability. It captures plans, model decisions, tool calls, inputs, outputs, latency, tokens, errors, and artifacts, then turns a failed run into a debuggable and verifiable branch.
+[中文](./README.md) · [Architecture](./docs/architecture.zh-CN.md) · [Changelog](./CHANGELOG.md)
 
-The flagship story follows a code-repair Agent that reads source, searches symbols, applies a patch, and runs tests. The immutable parent repeats a failing test without workspace progress. A child is restored from a safe checkpoint, applies a corrected strategy, passes the target tests, and is compared with its parent through span-linked diagnostics and deterministic evaluation.
+AgentScope is an AI Agent black-box replay tool that traces tool calls, detects no-progress loops, forks immutable checkpoints, and verifies fixes with span-linked evidence.
 
-![AgentScope code-fix black box](./public/harnesslab-desktop.png)
+![AgentScope social cover](./public/agentscope-social-card.png)
 
-## What's new in v0.3.0
+## The 90-second story
 
-- **Agent black-box runtime:** a generic multi-tool executor, structured decision providers, and a server-owned tool allowlist.
-- **Failure-to-fix workflow:** checkpoints, immutable parents, child forks, replay preflight, and evidence-linked comparison and evaluation.
-- **Real execution boundary:** a fixed code-repair scenario that runs `read/search/patch/test` inside a non-root, network-disabled, resource-limited Docker sandbox.
-- **Durable evidence:** PostgreSQL-backed traces, runs, analyses, and artifacts with patch diffs, test logs, span evidence, and permanent run URLs.
-- **Recovery and idempotency:** sequence-based SSE resume, event deduplication, idempotent run/fork creation, and interrupted-run convergence.
-- **Demo-to-development path:** a 90-second recorded demo with no infrastructure requirements, plus deterministic and live-model sandbox modes.
+```text
+Failure → Root cause → Fork → Verified fix
+```
 
-See [CHANGELOG.md](./CHANGELOG.md) for the complete release history.
+A code-repair Agent reads source, searches symbols, applies patches, and runs tests. The parent repeats the same failing test while workspace and result hashes remain unchanged. The user forks a safe checkpoint into a child, applies a corrected strategy, and verifies the result through deterministic Compare and Eval evidence.
 
-## Execution modes
+## Execution profiles
 
-| Mode | Tool execution | Requirements |
+| Profile | Purpose | Infrastructure |
 | --- | --- | --- |
-| Recorded replay | No; deterministic run bundle | None |
-| Deterministic sandbox | Real `read/search/patch/test` tools | PostgreSQL and Docker |
-| Live-model sandbox | Real allowlisted tools; model selects structured actions | PostgreSQL, Docker, API key |
+| `recorded_only` | Public portfolio and CI | None |
+| `local_sandbox` | Deterministic or live-model execution | PostgreSQL and Docker |
 
-The UI labels these modes explicitly. A missing database, Docker daemon, or provider key never blocks the recorded demo.
+The public profile skips Docker probing, hides live-provider controls, and rejects sandbox Run/Fork requests with `SANDBOX_DISABLED`. Local execution remains constrained to the built-in `buggy-auth-api` scenario.
 
-## Highlights
+## Engineering highlights
 
-- Generic `RunExecutor`, validated `DecisionProvider`, `ToolRegistry`, and isolated workspace boundary
-- Fixed `buggy-auth-api` scenario with server-owned commands and patch allowlists
-- Non-root, network-disabled Docker test runner with CPU, memory, PID, and timeout limits
-- Immutable parent runs, checkpoint snapshots, and copy-on-write child forks
-- Trace tree, timeline, replay controls, span inspector, and permanent run URLs
-- Diff and log artifact viewers with PostgreSQL persistence and secret redaction
-- No-progress loop detection using normalized calls plus workspace and test-result hashes
-- Evidence-linked `Resolved / Regressed / Trade-off` comparison and code-fix evaluation
-- Sequence-based SSE recovery and idempotent run/fork creation
-- Legacy code-audit workbench retained at `/audit`
+- Generic `RunExecutor`, validated `DecisionProvider`, `ToolRegistry`, and isolated workspace contracts
+- Server-owned patch allowlist and test command; models cannot generate arbitrary shell commands
+- Non-root, network-disabled Docker runner with CPU, memory, PID, and timeout limits
+- Append-only parent events, checkpoint snapshots, and copy-on-write child forks
+- No-progress diagnosis using normalized calls plus workspace and test-result hashes
+- Diff and log artifacts with redaction, size budgets, content hashes, and visibility rules
+- Evidence-linked `Resolved / Regressed / Trade-off` comparison and deterministic code-fix evaluation
+- Sequence-based SSE recovery, event deduplication, idempotent Run/Fork creation, and permanent Run URLs
+- recorded-only Smoke, axe, Lighthouse, desktop E2E, and mobile E2E gates
 
 ## Quick start
 
@@ -51,9 +47,9 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and select **Start 90-second demo**. No key or infrastructure is required.
+Open `http://localhost:3000` and select `Start 90-second demo`. No key, database, or Docker daemon is required.
 
-For local sandbox execution:
+For trusted local sandbox execution:
 
 ```bash
 docker compose up -d
@@ -62,15 +58,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Set:
-
-```bash
-DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
-DEEPSEEK_API_KEY=
-MINIMAX_API_KEY=
-```
-
-Provider secrets are server-only and are excluded from traces, artifacts, and exported bundles.
+Set `AGENTSCOPE_EXECUTION_PROFILE=local_sandbox` and configure `DATABASE_URL`. DeepSeek and MiniMax keys are optional server-only settings.
 
 ## Verification
 
@@ -80,15 +68,13 @@ npm run lint
 npm test
 npm run eval
 npm run build
+npm run smoke:recorded
 npm run e2e
+npm run lighthouse
 npm audit --omit=dev
 ```
 
-For the PostgreSQL integration suite, set `TEST_DATABASE_URL` explicitly before
-running `npm run test:postgres`. Docker sandbox tests require
-`TEST_DOCKER_SANDBOX=1`.
-
-AgentScope is intentionally a modular monolith and a portfolio-grade fixed-scenario sandbox. It does not execute arbitrary user repositories and does not claim multi-tenant production isolation.
+The current release is a modular monolith and a fixed-scenario portfolio sandbox. It does not execute arbitrary repositories or claim multi-tenant production isolation.
 
 ## License
 
