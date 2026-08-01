@@ -1,0 +1,13 @@
+{
+  "meta.title": "AgentScope | AI Agent 黑匣子回放器",
+  "meta.description": "通过可跳转的 Span 证据追踪、回放、分支并评测代码修复 Agent。",
+  "meta.openGraphDescription": "检查失败的 Agent 运行，从不可变 Checkpoint 创建分支，并用确定性证据验证修复。",
+  "header.description": "HarnessLab Agent 黑匣子，用于轨迹回放、失败检查与评测。",
+  "header.caseStudy": "案例说明",
+  "header.provider": "模型来源",
+  "header.github": "GitHub",
+  "language.english": "EN",
+  "language.chinese": "中文",
+  "language.switchToEnglish": "Switch to English",
+  "language.switchToChinese": "切换为中文"
+}

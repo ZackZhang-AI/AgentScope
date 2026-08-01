@@ -1,0 +1,13 @@
+{
+  "meta.title": "AgentScope | AI Agent Black Box Replay",
+  "meta.description": "Trace, replay, fork and evaluate a code-repair Agent through span-linked evidence.",
+  "meta.openGraphDescription": "Inspect a failed Agent run, fork an immutable checkpoint and verify the fix with deterministic evidence.",
+  "header.description": "HarnessLab Agent black box for trace replay, failure inspection and evaluation.",
+  "header.caseStudy": "Case Study",
+  "header.provider": "Provider",
+  "header.github": "GitHub",
+  "language.english": "EN",
+  "language.chinese": "中文",
+  "language.switchToEnglish": "Switch to English",
+  "language.switchToChinese": "切换为中文"
+}
