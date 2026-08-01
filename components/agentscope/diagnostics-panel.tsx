@@ -66,7 +66,7 @@ export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanel
                 <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-zinc-500">
                   {diagnostic.explanation}
                 </span>
-                <span className="mt-1.5 block font-mono text-[10px] text-zinc-400">
+                <span className="mt-1.5 block font-mono text-[10px] text-zinc-600">
                   confidence {Math.round(diagnostic.confidence * 100)}%
                 </span>
               </span>

@@ -13,6 +13,8 @@
     "eval": "vitest run tests/eval-suite.test.ts --reporter=verbose",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "smoke:recorded": "node scripts/recorded-only-smoke.mjs",
+    "lighthouse": "node scripts/run-lighthouse.mjs",
     "screenshot": "node scripts/capture-screenshot.mjs",
     "db:migrate": "node scripts/migrate-postgres.mjs"
   },
@@ -26,6 +28,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",

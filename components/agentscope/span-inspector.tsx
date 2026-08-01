@@ -131,8 +131,8 @@ export function SpanInspector({
         </div>
       </div>
 
-      <div className="overflow-x-auto border-b border-zinc-200" role="tablist" aria-label="Inspector views">
-        <div className="flex min-w-max px-2">
+      <div className="border-b border-zinc-200 xl:overflow-x-auto" role="tablist" aria-label="Inspector views">
+        <div className="flex flex-wrap px-2 xl:min-w-max xl:flex-nowrap">
           {tabs.map((item, index) => (
             <button
               key={item.id}

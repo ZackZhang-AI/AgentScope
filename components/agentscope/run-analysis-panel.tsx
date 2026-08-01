@@ -74,7 +74,7 @@ export function RunAnalysisPanel({
           }`}
         >
           Eval Report
-          <span className="ml-1 font-mono text-[9px] text-zinc-400">v1</span>
+          <span className="ml-1 font-mono text-[9px] text-zinc-600">v1</span>
         </button>
       </div>
 
@@ -168,7 +168,7 @@ export function RunAnalysisPanel({
                   </span>
                   <span className="truncate text-xs font-medium text-zinc-900">
                     {item.childSpan?.name ?? "No child step"}
-                    <span className="ml-2 font-mono text-[9px] text-zinc-400">
+                    <span className="ml-2 font-mono text-[9px] text-zinc-600">
                       {Math.round(item.confidence * 100)}%
                     </span>
                   </span>
@@ -234,7 +234,7 @@ export function RunAnalysisPanel({
 
           <div>
             <h3 className="text-xs font-semibold text-zinc-900">Limitations and export</h3>
-            <p className="mt-1 font-mono text-[10px] text-zinc-400">
+            <p className="mt-1 font-mono text-[10px] text-zinc-600">
               schema v{report.reportSchemaVersion} · trace seq {report.inputTraceSequence}
             </p>
             <ul className="mt-3 grid gap-2 text-[11px] leading-4 text-zinc-500">

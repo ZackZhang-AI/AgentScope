@@ -497,7 +497,7 @@ export function TraceExplorer({
               </div>
             </div>
           ) : (
-          <div className="grid min-h-[520px] xl:grid-cols-[minmax(510px,1fr)_300px]">
+          <div className="grid min-h-[520px] grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(510px,1fr)_300px]">
             <div className="min-w-0 overflow-x-auto">
               <div className="min-w-[720px]">
               <div className="grid grid-cols-[300px_minmax(340px,1fr)_70px] border-b border-zinc-200 bg-zinc-50 text-[10px] font-medium text-zinc-500">

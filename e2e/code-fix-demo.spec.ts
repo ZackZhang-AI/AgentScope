@@ -22,15 +22,15 @@ test("recorded code-fix story reaches an evidence-backed verified child", async 
   await expect(page).toHaveURL(/\/demos\/code-fix-loop$/);
   await expect(
     page.getByRole("heading", {
-      name: "Root cause: repeated tests produced no workspace progress",
+      name: "Failure: the parent ends after repeating the same test",
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /No-progress tool loop/ }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: /No-progress tool loop/ }).click();
-  await page.getByRole("tab", { name: "Replay" }).click();
+  await page.getByRole("button", { name: "Locate root cause" }).click();
+  await page.getByRole("button", { name: "Inspect safe checkpoint" }).click();
   await page.getByRole("button", { name: "Fork from this step" }).click();
   await expect(
     page.getByText("Ready for deterministic Fixture Replay"),
@@ -39,7 +39,7 @@ test("recorded code-fix story reaches an evidence-backed verified child", async 
 
   await expect(
     page.getByRole("heading", {
-      name: "Verified fix: the child test passed",
+      name: "The child removed the failure without mutating its parent",
     }),
   ).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
@@ -68,7 +68,7 @@ test("recorded demo restores from its permanent URL on mobile", async ({
   await expect(page.locator("main[data-hydrated='true']")).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Root cause: repeated tests produced no workspace progress",
+      name: "Failure: the parent ends after repeating the same test",
     }),
   ).toBeVisible();
   await expect(page.getByText("Failure", { exact: true })).toBeVisible();
@@ -92,25 +92,25 @@ test("local sandbox executes tools, forks a child, and restores its run URL", as
 
   await expect(
     page.getByRole("heading", {
-      name: "Root cause: repeated tests produced no workspace progress",
+      name: "Failure: the parent ends after repeating the same test",
     }),
   ).toBeVisible({ timeout: 45_000 });
-  await page.getByRole("button", { name: /No-progress tool loop/ }).click();
-  await page.getByRole("tab", { name: "Replay" }).click();
+  await page.getByRole("button", { name: "Locate root cause" }).click();
+  await page.getByRole("button", { name: "Inspect safe checkpoint" }).click();
   await page.getByRole("button", { name: "Fork from this step" }).click();
   await expect(page.getByText("Ready to create a child run")).toBeVisible();
   await page.getByRole("button", { name: "Create child run" }).click();
 
   await expect(
     page.getByRole("heading", {
-      name: "Verified fix: the child test passed",
+      name: "The child removed the failure without mutating its parent",
     }),
   ).toBeVisible({ timeout: 45_000 });
   await expect(page).toHaveURL(/\/runs\/codefix_/);
   await page.reload();
   await expect(
     page.getByRole("heading", {
-      name: "Verified fix: the child test passed",
+      name: "The child removed the failure without mutating its parent",
     }),
   ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Parent vs child facts")).toBeVisible();

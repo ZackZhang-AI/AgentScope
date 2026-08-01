@@ -80,7 +80,7 @@ test("provider switching and session restore remain usable", async ({ page }) =>
 test("mobile layout keeps primary controls visible", async ({ page }) => {
   await openWorkbench(page);
 
-  await expect(page.getByRole("heading", { name: "AgentScope" })).toBeVisible();
+  await expect(page.getByText("AgentScope", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run Audit" })).toBeVisible();
   await expect(page.getByLabel("Code input")).toBeVisible();
 });

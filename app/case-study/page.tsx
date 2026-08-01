@@ -68,14 +68,16 @@ export default async function CaseStudyPage() {
             </div>
 
             <figure className="overflow-hidden border border-zinc-300 bg-zinc-950 shadow-[10px_10px_0_0_#d4d4d8]">
-              <Image
-                src="/harnesslab-desktop.png"
-                alt="AgentScope trace explorer showing an agent run timeline, span tree and inspector"
-                width={1440}
-                height={1024}
-                priority
-                className="h-auto w-full"
-              />
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <Image
+                  src="/harnesslab-desktop.png"
+                  alt="AgentScope trace explorer showing an agent run timeline, span tree and inspector"
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 52vw, 100vw"
+                  className="object-cover object-top"
+                />
+              </div>
               <figcaption className="border-t border-zinc-700 px-4 py-3 font-mono text-[11px] text-zinc-300">
                 One projection drives Trace, Diagnostics, Compare and Eval.
               </figcaption>
@@ -135,7 +137,7 @@ export default async function CaseStudyPage() {
             </div>
             <div className="self-end font-mono text-xs leading-6 text-zinc-300">
               <div className="border border-zinc-700 bg-zinc-900 p-4">
-                <p className="text-zinc-500">PARENT</p>
+                <p className="text-zinc-400">PARENT</p>
                 <p className="mt-2 text-amber-300">failed run_tests → checkpoint</p>
               </div>
               <div className="ml-8 h-8 border-l border-emerald-500" aria-hidden="true" />
@@ -158,7 +160,12 @@ export default async function CaseStudyPage() {
                 The public deployment only serves recorded evidence. Local sandbox execution is restricted to one built-in scenario and fails closed when its dependencies are unavailable.
               </p>
             </div>
-            <div className="overflow-x-auto border border-zinc-300 bg-white">
+            <div
+              className="overflow-x-auto border border-zinc-300 bg-white"
+              tabIndex={0}
+              role="region"
+              aria-label="Sandbox security controls"
+            >
               <table className="w-full min-w-[620px] text-left text-sm">
                 <thead className="border-b border-zinc-200 bg-zinc-50 text-xs text-zinc-500">
                   <tr>

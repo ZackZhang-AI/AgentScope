@@ -72,11 +72,24 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Recorded-only deployment smoke
+        env:
+          AGENTSCOPE_EXECUTION_PROFILE: recorded_only
+          BASE_URL: http://127.0.0.1:3101
+        run: |
+          npm run start -- -p 3101 > /tmp/agentscope-recorded.log 2>&1 &
+          npm run smoke:recorded
+
       - name: Install browser
         run: npx playwright install --with-deps chrome
 
       - name: Browser E2E
         run: npm run e2e
+
+      - name: Lighthouse budgets
+        env:
+          AGENTSCOPE_EXECUTION_PROFILE: recorded_only
+        run: npm run lighthouse
 
       - name: Production dependency audit
         run: npm audit --omit=dev

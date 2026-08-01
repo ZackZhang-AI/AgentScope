@@ -340,7 +340,7 @@ export function CodeFixWorkbench({
         onSelect={selectGuideStep}
       />
 
-      <div className="mx-auto grid max-w-[1800px] gap-4 p-4 lg:p-6">
+      <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)] gap-4 p-4 lg:p-6">
         {error ? (
           <div className="flex gap-3 border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-900">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
