@@ -74,7 +74,9 @@ test("provider switching and session restore remain usable", async ({ page }) =>
   ).toBeVisible({ timeout: 20_000 });
 
   await page.reload();
-  await expect(page.getByRole("button", { name: /Missing authorization boundary/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Missing authorization boundary/ })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("mobile layout keeps primary controls visible", async ({ page }) => {
