@@ -1,7 +1,7 @@
 # AgentScope | AI Agent Black Box Replay
 
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.2-2563eb.svg)](./CHANGELOG.md)
 
 [Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Chinese Demo](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
 
