@@ -76,6 +76,29 @@ test("recorded demo restores from its permanent URL on mobile", async ({
   await expect(page.getByRole("tab", { name: "Artifacts" })).toBeVisible();
 });
 
+test("Chinese demo completes the full story and preserves state when switching language", async ({ page }) => {
+  await page.goto("/zh/demos/code-fix-loop");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.getByRole("heading", { name: /Parent 在重复运行同一测试后结束/ })).toBeVisible();
+  await expect(page.getByText("no_progress_loop", { exact: false })).toBeVisible();
+
+  await page.getByRole("button", { name: "定位根因" }).click();
+  await page.getByRole("button", { name: "检查安全 Checkpoint" }).click();
+  await page.getByRole("button", { name: "从此步骤创建分支" }).click();
+  await expect(page.getByText("可以执行确定性 Fixture Replay")).toBeVisible();
+  await page.getByRole("button", { name: "回放固定 Fixture" }).click();
+
+  await expect(page.getByRole("heading", { name: /Child 消除了失败/ })).toBeVisible();
+  await expect(page.getByText("Parent 与 Child 实测事实")).toBeVisible();
+  await page.getByRole("button", { name: "Eval 报告" }).click();
+  await expect(page.getByText("确定性规则评分")).toBeVisible();
+  await expect(page.getByText("run_tests", { exact: false })).toBeVisible();
+
+  await page.evaluate(() => { window.location.hash = "span-tool-test-success"; });
+  await page.getByRole("link", { name: "Switch to English" }).click();
+  await expect(page).toHaveURL(/\/demos\/code-fix-loop\?view=verified#span-tool-test-success$/);
+});
+
 test("local sandbox executes tools, forks a child, and restores its run URL", async ({
   page,
 }) => {

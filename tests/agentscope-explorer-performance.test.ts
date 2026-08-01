@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { TraceExplorer } from "../components/agentscope/trace-explorer";
+import { I18nProvider } from "../components/i18n-provider";
+import en from "../lib/i18n/dictionaries/en.json";
 import type { RunProjection } from "../lib/agentscope/domain/projection";
 import type { Span } from "../lib/agentscope/domain/span";
 
@@ -62,21 +64,28 @@ afterEach(cleanup);
 describe("Trace Explorer performance fixture", () => {
   it("renders and filters 1,000 spans within the PRD first-screen budget", () => {
     const startedAt = performance.now();
-    render(createElement(TraceExplorer, {
-      events: [],
-      projection: thousandSpanProjection(),
-      isRunning: false,
-      provider: "mock",
-      isForking: false,
-      onForkSpan: async () => true,
-      replayMode: "fixture",
-    }));
+    render(createElement(
+      I18nProvider,
+      {
+        locale: "en",
+        dictionary: en,
+      },
+      createElement(TraceExplorer, {
+          events: [],
+          projection: thousandSpanProjection(),
+          isRunning: false,
+          provider: "mock",
+          isForking: false,
+          onForkSpan: async () => true,
+          replayMode: "fixture",
+      }),
+    ));
     const elapsedMs = performance.now() - startedAt;
 
     expect(screen.getAllByRole("treeitem")).toHaveLength(1_000);
     expect(elapsedMs).toBeLessThan(2_000);
 
-    fireEvent.change(screen.getByPlaceholderText("Filter spans"), {
+    fireEvent.change(screen.getByPlaceholderText(/filter spans/i), {
       target: { value: "performance-span-999" },
     });
     expect(screen.getAllByRole("treeitem")).toHaveLength(2);

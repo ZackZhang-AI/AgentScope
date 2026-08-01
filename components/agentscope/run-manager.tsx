@@ -20,6 +20,7 @@ import {
   createRunBundle,
   parseRunBundle,
 } from "@/lib/agentscope/transfer/run-bundle";
+import { useI18n } from "@/components/i18n-provider";
 
 export type RunSelection = {
   projection: RunProjection;
@@ -94,6 +95,7 @@ export function RunManager({
   onCompareRuns,
   onClearLocal,
 }: RunManagerProps) {
+  const { t } = useI18n();
   const [persistentRuns, setPersistentRuns] = useState<RunSummary[]>([]);
   const [storageMode, setStorageMode] = useState<"loading" | "connected" | "browser">(
     "loading",
@@ -171,7 +173,7 @@ export function RunManager({
     try {
       onOpenRun(await fetchSelection(runId, sessions));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Run could not be loaded.");
+      setError(loadError instanceof Error ? loadError.message : t("manager.loadError"));
     } finally {
       setBusy(false);
     }
@@ -188,7 +190,7 @@ export function RunManager({
       onCompareRuns(baseline, candidate);
     } catch (compareError) {
       setError(
-        compareError instanceof Error ? compareError.message : "Runs could not be compared.",
+        compareError instanceof Error ? compareError.message : t("manager.compareError"),
       );
     } finally {
       setBusy(false);
@@ -223,14 +225,14 @@ export function RunManager({
             .filter(Boolean),
         }),
       });
-      if (!response.ok) throw new Error("Run metadata could not be saved.");
+      if (!response.ok) throw new Error(t("manager.saveError"));
       const payload = await response.json() as { run: RunSummary };
       setPersistentRuns((current) =>
         current.map((run) => (run.id === runId ? payload.run : run)),
       );
       setEditingRunId(undefined);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Run metadata could not be saved.");
+      setError(saveError instanceof Error ? saveError.message : t("manager.saveError"));
     } finally {
       setBusy(false);
     }
@@ -266,8 +268,8 @@ export function RunManager({
     } catch (importError) {
       setError(
         importError instanceof Error
-          ? `Import failed: ${importError.message}`
-          : "Import failed.",
+          ? t("manager.importErrorDetail", { message: importError.message })
+          : t("manager.importError"),
       );
     } finally {
       if (importInputRef.current) importInputRef.current.value = "";
@@ -280,19 +282,19 @@ export function RunManager({
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-emerald-700" aria-hidden="true" />
           <h2 id="run-manager-title" className="text-sm font-semibold text-zinc-950">
-            Recent Sessions
+            {t("manager.title")}
           </h2>
         </div>
         <div className="flex items-center gap-1">
           <span className="font-mono text-[10px] text-zinc-500">
-            {storageMode === "connected" ? "database + browser" : "browser only"}
+            {storageMode === "connected" ? t("manager.databaseBrowser") : t("manager.browserOnly")}
           </span>
           <button
             type="button"
             onClick={onClearLocal}
             disabled={!sessions.length}
             className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100 disabled:text-zinc-300"
-            aria-label="Clear sessions"
+            aria-label={t("manager.clear")}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -301,30 +303,30 @@ export function RunManager({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="relative col-span-2">
-          <span className="sr-only">Filter runs</span>
+          <span className="sr-only">{t("manager.filter")}</span>
           <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter runs"
+            placeholder={t("manager.filter")}
             className="h-8 w-full rounded-md border border-zinc-300 pl-7 pr-2 text-xs"
           />
         </label>
-        <select aria-label="Filter runs by status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
-          <option value="all">All statuses</option>
-          <option value="running">Running</option>
-          <option value="success">Success</option>
-          <option value="success_with_warnings">Warnings</option>
-          <option value="error">Error</option>
-          <option value="cancelled">Cancelled</option>
+        <select aria-label={t("manager.filterStatus")} value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
+          <option value="all">{t("manager.allStatuses")}</option>
+          <option value="running">{t("trace.running")}</option>
+          <option value="success">{t("trace.success")}</option>
+          <option value="success_with_warnings">{t("manager.warnings")}</option>
+          <option value="error">{t("trace.error")}</option>
+          <option value="cancelled">{t("trace.cancelled")}</option>
         </select>
-        <select aria-label="Filter runs by provider" value={provider} onChange={(event) => setProvider(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
-          <option value="all">All providers</option>
+        <select aria-label={t("manager.filterProvider")} value={provider} onChange={(event) => setProvider(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
+          <option value="all">{t("manager.allProviders")}</option>
           {providers.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
-        <select aria-label="Sort runs" value={sort} onChange={(event) => setSort(event.target.value as "newest" | "oldest")} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
+        <select aria-label={t("manager.sort")} value={sort} onChange={(event) => setSort(event.target.value as "newest" | "oldest")} className="h-8 rounded-md border border-zinc-300 px-2 text-xs">
+          <option value="newest">{t("manager.newest")}</option>
+          <option value="oldest">{t("manager.oldest")}</option>
         </select>
         <button
           type="button"
@@ -333,7 +335,7 @@ export function RunManager({
           className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-zinc-950 px-2 text-xs font-semibold text-white disabled:bg-zinc-300"
         >
           <GitCompareArrows className="h-3.5 w-3.5" aria-hidden="true" />
-          Compare {compareIds.length}/2
+          {t("manager.compare", { count: compareIds.length })}
         </button>
         <button
           type="button"
@@ -341,7 +343,7 @@ export function RunManager({
           className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-zinc-300 bg-white px-2 text-xs font-semibold text-zinc-700"
         >
           <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-          Import JSON
+          {t("manager.importJson")}
         </button>
         <button
           type="button"
@@ -350,14 +352,14 @@ export function RunManager({
           className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-zinc-300 bg-white px-2 text-xs font-semibold text-zinc-700 disabled:text-zinc-300"
         >
           <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          Export Run
+          {t("manager.exportRun")}
         </button>
         <input
           ref={importInputRef}
           type="file"
           accept="application/json,.json"
           className="sr-only"
-          aria-label="Import AgentScope run JSON"
+          aria-label={t("manager.importAria")}
           onChange={(event) => void importBundle(event.target.files?.[0])}
         />
       </div>
@@ -372,11 +374,11 @@ export function RunManager({
           >
             {editingRunId === run.id ? (
               <div className="grid gap-2">
-                <input aria-label="Run name" value={editName} onChange={(event) => setEditName(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs" />
-                <input aria-label="Run tags" value={editTags} onChange={(event) => setEditTags(event.target.value)} placeholder="tags, comma-separated" className="h-8 rounded-md border border-zinc-300 px-2 text-xs" />
+                <input aria-label={t("manager.runName")} value={editName} onChange={(event) => setEditName(event.target.value)} className="h-8 rounded-md border border-zinc-300 px-2 text-xs" />
+                <input aria-label={t("manager.runTags")} value={editTags} onChange={(event) => setEditTags(event.target.value)} placeholder={t("manager.tagsPlaceholder")} className="h-8 rounded-md border border-zinc-300 px-2 text-xs" />
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => saveMetadata(run.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800"><Check className="h-3.5 w-3.5" />Save</button>
-                  <button type="button" onClick={() => setEditingRunId(undefined)} className="inline-flex items-center gap-1 text-xs text-zinc-600"><X className="h-3.5 w-3.5" />Cancel</button>
+                  <button type="button" onClick={() => saveMetadata(run.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800"><Check className="h-3.5 w-3.5" />{t("manager.save")}</button>
+                  <button type="button" onClick={() => setEditingRunId(undefined)} className="inline-flex items-center gap-1 text-xs text-zinc-600"><X className="h-3.5 w-3.5" />{t("manager.cancel")}</button>
                 </div>
               </div>
             ) : (
@@ -392,9 +394,9 @@ export function RunManager({
                     type="button"
                     onClick={() => toggleCompare(run.id)}
                     className={`rounded-md border px-2 py-1 font-mono text-[10px] ${compareIds.includes(run.id) ? "border-emerald-500 bg-emerald-100 text-emerald-900" : "border-zinc-300 text-zinc-500"}`}
-                    aria-label={`${compareIds.includes(run.id) ? "Remove" : "Select"} ${run.id} for compare`}
+                    aria-label={t(compareIds.includes(run.id) ? "manager.removeCompare" : "manager.selectCompare", { runId: run.id })}
                   >
-                    {compareIds.indexOf(run.id) === 0 ? "A" : compareIds.indexOf(run.id) === 1 ? "B" : "Compare"}
+                    {compareIds.indexOf(run.id) === 0 ? "A" : compareIds.indexOf(run.id) === 1 ? "B" : t("manager.compareLabel")}
                   </button>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-1">
@@ -406,7 +408,7 @@ export function RunManager({
                   ) : null}
                   {run.tags.map((tag) => <span key={tag} className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-700">{tag}</span>)}
                   {run.source === "database" ? (
-                    <button type="button" onClick={() => beginEdit(run)} className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-200" aria-label={`Edit ${run.id} metadata`}>
+                    <button type="button" onClick={() => beginEdit(run)} className="ml-auto rounded p-1 text-zinc-500 hover:bg-zinc-200" aria-label={t("manager.editMetadata", { runId: run.id })}>
                       <Pencil className="h-3 w-3" aria-hidden="true" />
                     </button>
                   ) : null}
@@ -415,7 +417,7 @@ export function RunManager({
             )}
           </article>
         )) : (
-          <p className="text-sm leading-6 text-zinc-600">No runs match the current filters.</p>
+          <p className="text-sm leading-6 text-zinc-600">{t("manager.empty")}</p>
         )}
       </div>
     </section>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle, CheckCircle2, Play, ShieldX, X } from "lucide-react";
 import type { ReplayPreflight } from "@/lib/agentscope/replay/preflight";
 import type { Span } from "@/lib/agentscope/domain/span";
+import { useI18n } from "@/components/i18n-provider";
 
 type ReplayPreflightDialogProps = {
   target: Span;
@@ -30,6 +31,7 @@ export function ReplayPreflightDialog({
   onClose,
   onConfirm,
 }: ReplayPreflightDialogProps) {
+  const { t } = useI18n();
   const blocked = preflight.status === "blocked";
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -52,12 +54,12 @@ export function ReplayPreflightDialog({
         <header className="flex items-start justify-between gap-4 border-b border-zinc-200 p-4">
           <div>
             <h2 id="replay-preflight-title" className="text-base font-semibold text-zinc-950">
-              Replay preflight
+              {t("replay.title")}
             </h2>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               {mode === "fixture"
-                ? `Replay ${target.name} with fixed fixture responses. No model or tool request will be sent.`
-                : `Fork ${target.name} into a new child run. The parent trace remains unchanged.`}
+                ? t("replay.fixtureDescription", { name: target.name })
+                : t("replay.forkDescription", { name: target.name })}
             </p>
           </div>
           <button
@@ -65,7 +67,7 @@ export function ReplayPreflightDialog({
             onClick={onClose}
             disabled={isSubmitting}
             className="rounded-md border border-zinc-200 p-2 text-zinc-500 hover:bg-zinc-50"
-            aria-label="Close replay preflight"
+            aria-label={t("replay.close")}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -83,20 +85,20 @@ export function ReplayPreflightDialog({
             <div>
               <p className={`text-xs font-semibold ${blocked ? "text-red-900" : "text-emerald-900"}`}>
                 {blocked
-                  ? "Replay blocked"
+                  ? t("replay.blocked")
                   : mode === "fixture"
-                    ? "Ready for deterministic Fixture Replay"
-                    : "Ready to create a child run"}
+                    ? t("replay.fixtureReady")
+                    : t("replay.childReady")}
               </p>
               <p className={`mt-1 text-xs leading-5 ${blocked ? "text-red-800" : "text-emerald-800"}`}>
-                Checkpoint {preflight.checkpointId ?? "not available"}. Provider {provider}.
+                {t("replay.checkpointProvider", { checkpoint: preflight.checkpointId ?? t("replay.notAvailable"), provider })}
               </p>
             </div>
           </div>
 
           {preflight.reasons.length > 0 ? (
             <div>
-              <h3 className="text-xs font-semibold text-zinc-900">Blocking reasons</h3>
+              <h3 className="text-xs font-semibold text-zinc-900">{t("replay.blockingReasons")}</h3>
               <ul className="mt-2 grid gap-2">
                 {preflight.reasons.map((reason) => (
                   <li key={reason} className="flex gap-2 text-xs leading-5 text-red-800">
@@ -109,7 +111,7 @@ export function ReplayPreflightDialog({
           ) : null}
 
           <div>
-            <h3 className="text-xs font-semibold text-zinc-900">Execution scope</h3>
+            <h3 className="text-xs font-semibold text-zinc-900">{t("replay.executionScope")}</h3>
             <div className="mt-2 overflow-hidden rounded-md border border-zinc-200">
               {preflight.actions.map((action) => (
                 <div
@@ -136,7 +138,7 @@ export function ReplayPreflightDialog({
             disabled={isSubmitting}
             className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
           >
-            Cancel
+            {t("replay.cancel")}
           </button>
           <button
             type="button"
@@ -146,8 +148,8 @@ export function ReplayPreflightDialog({
           >
             <Play className="h-3.5 w-3.5" aria-hidden="true" />
             {isSubmitting
-              ? mode === "fixture" ? "Loading fixture branch" : "Creating child run"
-              : mode === "fixture" ? "Replay fixed fixture" : "Create child run"}
+              ? mode === "fixture" ? t("replay.loadingFixture") : t("replay.creatingChild")
+              : mode === "fixture" ? t("replay.replayFixture") : t("replay.createChild")}
           </button>
         </footer>
       </dialog>

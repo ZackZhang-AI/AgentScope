@@ -1,5 +1,13 @@
 # 更新日志
 
+## 0.3.2 - 2026-08-01
+
+- 新增类型安全的英文与中文词典，英文保留原 URL，中文使用 `/zh`
+- Header 新增 `EN / 中文` 切换，并保留 Run ID、查询参数与 Hash
+- 完成首页、Demo、Run、Case Study 与 Audit 全界面中文化，原始证据标识保持不变
+- 新增双语 Metadata、canonical、`hreflang`、sitemap 与 CJK 系统字体回退
+- 扩展词典完整性、双语路由、recorded-only Smoke、axe、Lighthouse 和旗舰演示 E2E 门禁
+
 ## 0.3.1 - 2026-08-01
 
 - 新增 `recorded_only` 与 `local_sandbox` 执行配置，公开部署默认失败关闭

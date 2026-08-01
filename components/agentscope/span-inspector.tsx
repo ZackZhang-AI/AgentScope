@@ -7,6 +7,8 @@ import type { ReplayCheckpoint } from "@/lib/agentscope/domain/checkpoint";
 import type { Span } from "@/lib/agentscope/domain/span";
 import { formatDuration, summarizeTokens } from "@/lib/agentscope/presentation/trace-view";
 import { ArtifactViewer } from "./artifact-viewer";
+import { useI18n } from "@/components/i18n-provider";
+import type { MessageKey } from "@/lib/i18n/config";
 
 export type InspectorTab =
   | "overview"
@@ -27,22 +29,22 @@ type SpanInspectorProps = {
   requestedView?: { tab: InspectorTab; nonce: number };
 };
 
-const tabs: { id: InspectorTab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "input", label: "Input" },
-  { id: "output", label: "Output" },
-  { id: "error", label: "Error" },
-  { id: "metrics", label: "Metrics" },
-  { id: "artifacts", label: "Artifacts" },
-  { id: "replay", label: "Replay" },
-  { id: "raw", label: "Raw" },
+const tabs: { id: InspectorTab; key: MessageKey }[] = [
+  { id: "overview", key: "inspector.overview" },
+  { id: "input", key: "inspector.input" },
+  { id: "output", key: "inspector.output" },
+  { id: "error", key: "inspector.error" },
+  { id: "metrics", key: "inspector.metrics" },
+  { id: "artifacts", key: "inspector.artifacts" },
+  { id: "replay", key: "inspector.replay" },
+  { id: "raw", key: "inspector.raw" },
 ];
 
-function JsonBlock({ value, label }: { value: unknown; label: string }) {
+function JsonBlock({ value, label, emptyText, copyText }: { value: unknown; label: string; emptyText: string; copyText: string }) {
   const text = JSON.stringify(value, null, 2);
 
   if (value === undefined) {
-    return <p className="p-4 text-sm text-zinc-500">No {label.toLowerCase()} captured.</p>;
+    return <p className="p-4 text-sm text-zinc-500">{emptyText}</p>;
   }
 
   return (
@@ -54,7 +56,7 @@ function JsonBlock({ value, label }: { value: unknown; label: string }) {
         aria-label={`Copy ${label.toLowerCase()}`}
       >
         <Copy className="h-3 w-3" aria-hidden="true" />
-        Copy
+        {copyText}
       </button>
       <pre className="max-h-[420px] overflow-auto bg-zinc-950 p-4 pr-16 font-mono text-xs leading-5 text-zinc-200">
         {text}
@@ -80,6 +82,7 @@ export function SpanInspector({
   onRequestFork,
   requestedView,
 }: SpanInspectorProps) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<InspectorTab>(requestedView?.tab ?? "overview");
 
   if (!span) {
@@ -87,9 +90,9 @@ export function SpanInspector({
       <aside className="flex min-h-64 items-center justify-center border-l border-zinc-200 bg-white p-6 text-center">
         <div>
           <Database className="mx-auto h-5 w-5 text-zinc-400" aria-hidden="true" />
-          <p className="mt-3 text-sm font-medium text-zinc-800">No span selected</p>
+          <p className="mt-3 text-sm font-medium text-zinc-800">{t("inspector.noSelection")}</p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Select a row to inspect its payload and metrics.
+            {t("inspector.selectHint")}
           </p>
         </div>
       </aside>
@@ -118,7 +121,7 @@ export function SpanInspector({
   }
 
   return (
-    <aside className="min-w-0 border-l border-zinc-200 bg-white" aria-label="Span inspector">
+    <aside className="min-w-0 border-l border-zinc-200 bg-white" aria-label={t("inspector.ariaLabel")}>
       <div className="border-b border-zinc-200 p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -131,7 +134,7 @@ export function SpanInspector({
         </div>
       </div>
 
-      <div className="border-b border-zinc-200 xl:overflow-x-auto" role="tablist" aria-label="Inspector views">
+      <div className="border-b border-zinc-200 xl:overflow-x-auto" role="tablist" aria-label={t("inspector.views")}>
         <div className="flex flex-wrap px-2 xl:min-w-max xl:flex-nowrap">
           {tabs.map((item, index) => (
             <button
@@ -150,7 +153,7 @@ export function SpanInspector({
                   : "border-transparent text-zinc-500 hover:text-zinc-900"
               }`}
             >
-              {item.label}
+              {t(item.key)}
             </button>
           ))}
         </div>
@@ -159,16 +162,16 @@ export function SpanInspector({
       {tab === "overview" ? (
         <div id="inspector-panel-overview" role="tabpanel" aria-labelledby="inspector-tab-overview" className="p-3">
           <dl>
-            <Metric label="Status" value={span.status} />
-            <Metric label="Started" value={new Date(span.startedAt).toLocaleString()} />
-            <Metric label="Ended" value={span.endedAt ? new Date(span.endedAt).toLocaleString() : "Running"} />
-            <Metric label="Artifacts" value={spanArtifacts.length} />
+            <Metric label={t("inspector.status")} value={span.status} />
+            <Metric label={t("inspector.started")} value={new Date(span.startedAt).toLocaleString()} />
+            <Metric label={t("inspector.ended")} value={span.endedAt ? new Date(span.endedAt).toLocaleString() : t("inspector.running")} />
+            <Metric label={t("inspector.artifacts")} value={spanArtifacts.length} />
           </dl>
         </div>
       ) : null}
 
-      {tab === "input" ? <div id="inspector-panel-input" role="tabpanel" aria-labelledby="inspector-tab-input"><JsonBlock value={span.inputRef} label="Input" /></div> : null}
-      {tab === "output" ? <div id="inspector-panel-output" role="tabpanel" aria-labelledby="inspector-tab-output"><JsonBlock value={span.outputRef} label="Output" /></div> : null}
+      {tab === "input" ? <div id="inspector-panel-input" role="tabpanel" aria-labelledby="inspector-tab-input"><JsonBlock value={span.inputRef} label={t("inspector.input")} emptyText={t("inspector.noInput")} copyText={t("inspector.copy")} /></div> : null}
+      {tab === "output" ? <div id="inspector-panel-output" role="tabpanel" aria-labelledby="inspector-tab-output"><JsonBlock value={span.outputRef} label={t("inspector.output")} emptyText={t("inspector.noOutput")} copyText={t("inspector.copy")} /></div> : null}
       {tab === "error" ? (
         <div id="inspector-panel-error" role="tabpanel" aria-labelledby="inspector-tab-error">
           {span.error ? (
@@ -182,18 +185,18 @@ export function SpanInspector({
             </div>
           </div>
         ) : (
-          <p className="p-4 text-sm text-zinc-500">No structured error captured.</p>
+          <p className="p-4 text-sm text-zinc-500">{t("inspector.noError")}</p>
           )}
         </div>
       ) : null}
       {tab === "metrics" ? (
         <div id="inspector-panel-metrics" role="tabpanel" aria-labelledby="inspector-tab-metrics" className="p-3">
           <dl>
-            <Metric label="Duration" value={formatDuration(span.metrics?.durationMs)} />
-            <Metric label="Time to first token" value={formatDuration(span.metrics?.timeToFirstTokenMs)} />
-            <Metric label="Input tokens" value={span.metrics?.tokenUsage?.inputTokens ?? "Not reported"} />
-            <Metric label="Output tokens" value={span.metrics?.tokenUsage?.outputTokens ?? "Not reported"} />
-            <Metric label="Total tokens" value={tokenCount || "Not reported"} />
+            <Metric label={t("inspector.duration")} value={formatDuration(span.metrics?.durationMs)} />
+            <Metric label={t("inspector.timeToFirstToken")} value={formatDuration(span.metrics?.timeToFirstTokenMs)} />
+            <Metric label={t("inspector.inputTokens")} value={span.metrics?.tokenUsage?.inputTokens ?? t("inspector.notReported")} />
+            <Metric label={t("inspector.outputTokens")} value={span.metrics?.tokenUsage?.outputTokens ?? t("inspector.notReported")} />
+            <Metric label={t("inspector.totalTokens")} value={tokenCount || t("inspector.notReported")} />
           </dl>
         </div>
       ) : null}
@@ -210,13 +213,13 @@ export function SpanInspector({
         <div id="inspector-panel-replay" role="tabpanel" aria-labelledby="inspector-tab-replay" className="p-3">
           <div className="flex items-center gap-2">
             <RotateCcw className="h-4 w-4 text-zinc-500" aria-hidden="true" />
-            <h3 className="text-xs font-semibold text-zinc-900">Replay safety</h3>
+            <h3 className="text-xs font-semibold text-zinc-900">{t("inspector.replaySafety")}</h3>
           </div>
           <p className="mt-2 text-xs leading-5 text-zinc-600">
             {replay?.reason ?? (
               spanCheckpoint
-                ? `Checkpoint ${spanCheckpoint.completeness}.`
-                : "No replay checkpoint was captured."
+                ? t("inspector.checkpointState", { state: spanCheckpoint.completeness })
+                : t("inspector.noCheckpoint")
             )}
           </p>
           <span className={`mt-2 inline-flex rounded-md px-2 py-1 font-mono text-[10px] ${
@@ -240,11 +243,11 @@ export function SpanInspector({
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            Fork from this step
+            {t("inspector.forkFromStep")}
           </button>
         </div>
       ) : null}
-      {tab === "raw" ? <div id="inspector-panel-raw" role="tabpanel" aria-labelledby="inspector-tab-raw"><JsonBlock value={span} label="Raw span" /></div> : null}
+      {tab === "raw" ? <div id="inspector-panel-raw" role="tabpanel" aria-labelledby="inspector-tab-raw"><JsonBlock value={span} label={t("inspector.rawSpan")} emptyText={t("inspector.noRaw")} copyText={t("inspector.copy")} /></div> : null}
     </aside>
   );
 }

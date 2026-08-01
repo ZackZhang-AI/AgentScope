@@ -1,13 +1,15 @@
 # AgentScope | AI Agent Black Box Replay
 
 [![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.2-2563eb.svg)](./CHANGELOG.md)
 
-[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Chinese Demo](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
 
 [中文](./README.md) · [Architecture](./docs/architecture.zh-CN.md) · [Changelog](./CHANGELOG.md)
 
 AgentScope is an AI Agent black-box replay tool that traces tool calls, detects no-progress loops, forks immutable checkpoints, and verifies fixes with span-linked evidence.
+
+English keeps the original unprefixed URLs. Chinese uses `/zh`; the compact Header switch preserves Demo and Run paths, query parameters, and hashes. API, Trace, Artifact, and Bundle data remain unchanged.
 
 [![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm)
 

@@ -41,6 +41,7 @@ import { diagnoseRun } from "@/lib/agentscope/diagnostics/diagnose-run";
 import { buildReplayPreflight } from "@/lib/agentscope/replay/preflight";
 import { ReplayPreflightDialog } from "./replay-preflight-dialog";
 import { RunAnalysisPanel } from "./run-analysis-panel";
+import { useI18n } from "@/components/i18n-provider";
 
 type TraceExplorerProps = {
   events: TraceEvent[];
@@ -96,6 +97,7 @@ export function TraceExplorer({
   replayMode,
   focusRequest,
 }: TraceExplorerProps) {
+  const { t } = useI18n();
   const [cursor, setCursor] = useState<number | null>(null);
   const [selectedSpanId, setSelectedSpanId] = useState<string | undefined>(focusRequest?.spanId);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -239,7 +241,7 @@ export function TraceExplorer({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="trace-explorer-title" className="text-sm font-semibold text-zinc-950">
-              Harness Trace
+              {t("trace.title")}
             </h2>
             {run ? (
               <>
@@ -250,9 +252,9 @@ export function TraceExplorer({
                 {run.parentRunId ? (
                   <span
                     className="max-w-48 truncate rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-[10px] text-emerald-800"
-                    title={`Forked from ${run.parentRunId}`}
+                    title={t("trace.forkedFrom", { runId: run.parentRunId })}
                   >
-                    child of {run.parentRunId}
+                    {t("trace.childOf", { runId: run.parentRunId })}
                   </span>
                 ) : null}
               </>
@@ -260,21 +262,21 @@ export function TraceExplorer({
           </div>
           <p className="mt-1 text-xs text-zinc-500">
             {currentEvent
-              ? `Event ${displayCursor}/${events.length}: ${currentEvent.type}`
+              ? t("trace.eventProgress", { current: displayCursor, total: events.length, type: currentEvent.type })
               : isRunning
-                ? "Waiting for the first trace event."
-                : "Run an audit to inspect its execution path."}
+                ? t("trace.waitingFirstEvent")
+                : t("trace.runPrompt")}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1" aria-label="Visual replay controls">
+        <div className="flex flex-wrap items-center gap-1" aria-label={t("trace.replayControls")}>
           <button
             type="button"
             disabled={!canReplay || displayCursor === 0}
             onClick={() => { setIsPlaying(false); setCursor(0); }}
             className="trace-control"
-            aria-label="Restart visual replay"
-            title="Restart visual replay"
+            aria-label={t("trace.restartReplay")}
+            title={t("trace.restartReplay")}
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -283,8 +285,8 @@ export function TraceExplorer({
             disabled={!canReplay || displayCursor === 0}
             onClick={() => { setIsPlaying(false); setCursor(Math.max(0, displayCursor - 1)); }}
             className="trace-control"
-            aria-label="Previous event"
-            title="Previous event"
+            aria-label={t("trace.previousEvent")}
+            title={t("trace.previousEvent")}
           >
             <SkipBack className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -296,18 +298,18 @@ export function TraceExplorer({
               setIsPlaying((value) => !value);
             }}
             className="trace-control min-w-16"
-            aria-label={isPlaying ? "Pause visual replay" : "Play visual replay"}
+            aria-label={isPlaying ? t("trace.pauseReplay") : t("trace.playReplay")}
           >
             {isPlaying ? <Pause className="h-3.5 w-3.5" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
-            {isPlaying ? "Pause" : "Play"}
+            {isPlaying ? t("trace.pause") : t("trace.play")}
           </button>
           <button
             type="button"
             disabled={!canReplay || displayCursor >= events.length}
             onClick={() => { setIsPlaying(false); setCursor(Math.min(events.length, displayCursor + 1)); }}
             className="trace-control"
-            aria-label="Next event"
-            title="Next event"
+            aria-label={t("trace.nextEvent")}
+            title={t("trace.nextEvent")}
           >
             <SkipForward className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -316,15 +318,15 @@ export function TraceExplorer({
             disabled={!canReplay}
             onClick={() => setSpeed((value) => value === 1 ? 2 : value === 2 ? 0.5 : 1)}
             className="trace-control"
-            aria-label={`Replay speed ${speed} times`}
-            title="Change replay speed"
+            aria-label={t("trace.replaySpeed", { speed })}
+            title={t("trace.changeSpeed")}
           >
             <FastForward className="h-3.5 w-3.5" aria-hidden="true" />
             {speed}x
           </button>
           {canReplay ? (
             <label className="ml-1 flex min-w-40 items-center gap-2 text-[10px] text-zinc-500">
-              <span className="sr-only">Seek visual replay event</span>
+              <span className="sr-only">{t("trace.seekReplay")}</span>
               <input
                 type="range"
                 min={0}
@@ -335,7 +337,7 @@ export function TraceExplorer({
                   setCursor(Number(event.target.value));
                 }}
                 className="w-28 accent-emerald-700"
-                aria-label="Seek visual replay event"
+                aria-label={t("trace.seekReplay")}
               />
               <span className="min-w-10 font-mono">{displayCursor}/{events.length}</span>
             </label>
@@ -348,10 +350,10 @@ export function TraceExplorer({
           <div>
             <GitBranch className="mx-auto h-6 w-6 text-zinc-400" aria-hidden="true" />
             <p className="mt-3 text-sm font-medium text-zinc-800">
-              {isRunning ? "Trace is starting" : "No structured trace yet"}
+              {isRunning ? t("trace.starting") : t("trace.empty")}
             </p>
             <p className="mt-1 max-w-sm text-xs leading-5 text-zinc-500">
-              Agent plans, model calls, tools, errors, latency and tokens will appear here.
+              {t("trace.emptyDescription")}
             </p>
           </div>
         </div>
@@ -360,25 +362,25 @@ export function TraceExplorer({
           <div className="flex flex-col gap-2 border-b border-zinc-200 bg-white p-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <label className="relative">
-                <span className="sr-only">Filter trace spans</span>
+                <span className="sr-only">{t("trace.filterSpans")}</span>
                 <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />
                 <input
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Filter spans"
+                  placeholder={t("trace.filterPlaceholder")}
                   className="h-8 w-44 rounded-md border border-zinc-300 bg-white pl-7 pr-2 text-xs text-zinc-900 placeholder:text-zinc-400"
                 />
               </label>
               <label>
-                <span className="sr-only">Filter by span kind</span>
+                <span className="sr-only">{t("trace.filterKind")}</span>
                 <select
                   value={kindFilter}
                   onChange={(event) => setKindFilter(event.target.value as SpanKind | "all")}
                   className="h-8 rounded-md border border-zinc-300 bg-white px-2 text-xs text-zinc-700"
-                  aria-label="Filter by span kind"
+                  aria-label={t("trace.filterKind")}
                 >
-                  <option value="all">All kinds</option>
+                  <option value="all">{t("trace.allKinds")}</option>
                   <option value="agent">Agent</option>
                   <option value="plan">Plan</option>
                   <option value="model">Model</option>
@@ -390,19 +392,19 @@ export function TraceExplorer({
                 </select>
               </label>
               <label>
-                <span className="sr-only">Filter by span status</span>
+                <span className="sr-only">{t("trace.filterStatus")}</span>
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value as SpanStatus | "all")}
                   className="h-8 rounded-md border border-zinc-300 bg-white px-2 text-xs text-zinc-700"
-                  aria-label="Filter by span status"
+                  aria-label={t("trace.filterStatus")}
                 >
-                  <option value="all">All statuses</option>
-                  <option value="running">Running</option>
-                  <option value="success">Success</option>
-                  <option value="error">Error</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="skipped">Skipped</option>
+                  <option value="all">{t("trace.allStatuses")}</option>
+                  <option value="running">{t("trace.running")}</option>
+                  <option value="success">{t("trace.success")}</option>
+                  <option value="error">{t("trace.error")}</option>
+                  <option value="cancelled">{t("trace.cancelled")}</option>
+                  <option value="skipped">{t("trace.skipped")}</option>
                 </select>
               </label>
               <button
@@ -415,14 +417,14 @@ export function TraceExplorer({
                     : "border-zinc-300 bg-white text-zinc-600"
                 }`}
               >
-                Key steps
+                {t("trace.keySteps")}
               </button>
               <span className="font-mono text-[10px] text-zinc-500">
-                {rows.length}/{visibleProjection?.spans.length ?? 0} visible
+                {t("trace.visibleCount", { visible: rows.length, total: visibleProjection?.spans.length ?? 0 })}
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1" aria-label="Timeline viewport controls">
+            <div className="flex flex-wrap items-center gap-1" aria-label={t("trace.timelineControls")}>
               <button
                 type="button"
                 className="trace-control"
@@ -432,8 +434,8 @@ export function TraceExplorer({
                   setTimelineZoom(next);
                   setViewportStart((value) => Math.min(value, 100 - 100 / next));
                 }}
-                aria-label="Zoom timeline out"
-                title="Zoom timeline out"
+                aria-label={t("trace.zoomOut")}
+                title={t("trace.zoomOut")}
               >
                 <ZoomOut className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -442,8 +444,8 @@ export function TraceExplorer({
                 className="trace-control"
                 disabled={timelineZoom === 4}
                 onClick={() => setTimelineZoom((value) => Math.min(4, value * 2))}
-                aria-label="Zoom timeline in"
-                title="Zoom timeline in"
+                aria-label={t("trace.zoomIn")}
+                title={t("trace.zoomIn")}
               >
                 <ZoomIn className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -454,14 +456,14 @@ export function TraceExplorer({
                   setTimelineZoom(1);
                   setViewportStart(0);
                 }}
-                aria-label="Fit entire timeline"
+                aria-label={t("trace.fitTimeline")}
               >
                 <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
-                Fit
+                {t("trace.fit")}
               </button>
               {timelineZoom > 1 ? (
                 <label className="ml-1 flex items-center gap-2 text-[10px] text-zinc-500">
-                  <span>Pan</span>
+                  <span>{t("trace.pan")}</span>
                   <input
                     type="range"
                     min={0}
@@ -470,7 +472,7 @@ export function TraceExplorer({
                     value={viewportStart}
                     onChange={(event) => setViewportStart(Number(event.target.value))}
                     className="w-24 accent-emerald-700"
-                    aria-label="Pan timeline viewport"
+                    aria-label={t("trace.panTimeline")}
                   />
                 </label>
               ) : null}
@@ -481,7 +483,7 @@ export function TraceExplorer({
             <div className="flex min-h-64 items-center justify-center border-b border-zinc-200 p-6 text-center">
               <div>
                 <Search className="mx-auto h-5 w-5 text-zinc-400" aria-hidden="true" />
-                <p className="mt-2 text-sm font-medium text-zinc-800">No spans match these filters</p>
+                <p className="mt-2 text-sm font-medium text-zinc-800">{t("trace.noMatches")}</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -492,7 +494,7 @@ export function TraceExplorer({
                   }}
                   className="mt-3 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 >
-                  Clear filters
+                  {t("trace.clearFilters")}
                 </button>
               </div>
             </div>
@@ -501,11 +503,11 @@ export function TraceExplorer({
             <div className="min-w-0 overflow-x-auto">
               <div className="min-w-[720px]">
               <div className="grid grid-cols-[300px_minmax(340px,1fr)_70px] border-b border-zinc-200 bg-zinc-50 text-[10px] font-medium text-zinc-500">
-                <div className="px-3 py-2">Execution path</div>
-                <div className="border-l border-zinc-200 px-3 py-2">Relative timeline</div>
-                <div className="border-l border-zinc-200 px-2 py-2 text-right">Duration</div>
+                <div className="px-3 py-2">{t("trace.executionPath")}</div>
+                <div className="border-l border-zinc-200 px-3 py-2">{t("trace.relativeTimeline")}</div>
+                <div className="border-l border-zinc-200 px-2 py-2 text-right">{t("trace.duration")}</div>
               </div>
-              <div role="tree" aria-label="Trace span tree">
+              <div role="tree" aria-label={t("trace.spanTree")}>
                 {rows.map((row, rowIndex) => {
                   const { span, depth, hasChildren, isExpanded, hasErrorDescendant } = row;
                   const Icon = kindIcon[span.kind];
@@ -544,7 +546,7 @@ export function TraceExplorer({
                               toggleCollapsed(span.id);
                             }}
                             className="mr-1 rounded-sm p-0.5 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
-                            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${span.name}`}
+                            aria-label={`${isExpanded ? t("trace.collapse") : t("trace.expand")} ${span.name}`}
                             tabIndex={-1}
                           >
                             {isExpanded
@@ -565,7 +567,7 @@ export function TraceExplorer({
                         {span.status !== "error" && hasErrorDescendant ? (
                           <AlertCircle
                             className="ml-auto h-3.5 w-3.5 shrink-0 text-red-500"
-                            aria-label="Contains an error descendant"
+                            aria-label={t("trace.errorDescendant")}
                           />
                         ) : null}
                       </div>
