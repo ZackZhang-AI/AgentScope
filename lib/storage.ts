@@ -1,6 +1,6 @@
 import type { AuditResponse } from "./types";
 
-const STORAGE_KEY = "harnesslab.sessions.v1";
+const STORAGE_KEY = "harnesslab.sessions.v2";
 const MAX_SESSIONS = 6;
 
 export function loadSessions(): AuditResponse[] {

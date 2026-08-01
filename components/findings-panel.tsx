@@ -77,13 +77,36 @@ export function FindingsPanel({ result }: FindingsPanelProps) {
             ))
           ) : (
             <p className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-              Findings will appear after a mock or DeepSeek audit completes.
+              Findings will appear after a Mock, DeepSeek, or MiniMax audit completes.
             </p>
           )}
         </div>
       </div>
 
       <EvalCardView evalCard={result?.evalCard ?? null} />
+      {result ? (
+        <section>
+          <h2 className="text-sm font-semibold text-zinc-950">Run Metrics</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
+            <dt className="text-zinc-500">Provider</dt>
+            <dd className="truncate text-right font-medium text-zinc-900">
+              {result.model ?? result.provider}
+            </dd>
+            <dt className="text-zinc-500">Latency</dt>
+            <dd className="text-right font-mono text-zinc-900">
+              {result.metrics.providerLatencyMs} ms
+            </dd>
+            <dt className="text-zinc-500">Prompt</dt>
+            <dd className="text-right font-mono text-zinc-900">
+              {result.metrics.promptVersion}
+            </dd>
+            <dt className="text-zinc-500">Tokens</dt>
+            <dd className="text-right font-mono text-zinc-900">
+              {result.metrics.tokenUsage?.totalTokens ?? "n/a"}
+            </dd>
+          </dl>
+        </section>
+      ) : null}
       <ExportButtons result={result} />
     </aside>
   );

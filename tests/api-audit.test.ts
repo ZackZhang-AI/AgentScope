@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "../app/api/audit/route";
+import { auditResponseSchema } from "../lib/schemas";
 
 function request(body: unknown) {
   return new Request("http://localhost/api/audit", {
     method: "POST",
     body: JSON.stringify(body),
     headers: { "content-type": "application/json" },
+  });
+}
+
+function streamRequest(body: unknown) {
+  return new Request("http://localhost/api/audit", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      accept: "text/event-stream",
+      "content-type": "application/json",
+    },
   });
 }
 
@@ -24,7 +36,58 @@ describe("POST /api/audit", () => {
     expect(response.status).toBe(200);
     expect(json.provider).toBe("mock");
     expect(json.events.length).toBeGreaterThan(0);
+    expect(json.trace.run.id).toBe(json.id);
+    expect(json.trace.run.status).toBe("success_with_warnings");
+    expect(json.trace.spans.some((span: { kind: string }) => span.kind === "model")).toBe(
+      true,
+    );
+    expect(auditResponseSchema.safeParse(json).success).toBe(true);
     expect(json.reportMarkdown).toContain("HarnessLab Audit Report");
+  });
+
+  it("streams trace updates before the final result", async () => {
+    const response = await POST(
+      streamRequest({
+        content: "const sql = `select * from users where id = ${id}`;",
+        inputType: "files",
+        provider: "mock",
+        intensity: "quick",
+        rules: ["security", "testing"],
+      }),
+    );
+    const stream = await response.text();
+
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(response.headers.get("x-agentscope-resumable")).toBe(
+      process.env.DATABASE_URL ? "true" : "false",
+    );
+    expect(stream).toContain("event: trace");
+    expect(stream).toContain("event: trace_event");
+    expect(stream).toContain("id: 1");
+    expect(stream).toContain('"type":"run.created"');
+    expect(stream).toContain('"type":"span.started"');
+    expect(stream).toContain('"status":"running"');
+    expect(stream).toContain("event: result");
+  });
+
+  it("closes the structured trace before streaming a provider failure", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", "");
+
+    const response = await POST(
+      streamRequest({
+        content: "const ok = true;",
+        inputType: "files",
+        provider: "deepseek",
+        intensity: "quick",
+      }),
+    );
+    const stream = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(stream).toContain('"type":"span.ended"');
+    expect(stream).toContain('"status":"error"');
+    expect(stream).toContain('"type":"run.ended"');
+    expect(stream).toContain("event: error");
   });
 
   it("returns validation errors for invalid input", async () => {
@@ -55,5 +118,22 @@ describe("POST /api/audit", () => {
 
     expect(response.status).toBe(400);
     expect(json.error).toMatch(/DEEPSEEK_API_KEY/);
+  });
+
+  it("returns a configuration error when MiniMax key is missing", async () => {
+    vi.stubEnv("MINIMAX_API_KEY", "");
+
+    const response = await POST(
+      request({
+        content: "const ok = true;",
+        inputType: "files",
+        provider: "minimax",
+        intensity: "quick",
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toMatch(/MINIMAX_API_KEY/);
   });
 });

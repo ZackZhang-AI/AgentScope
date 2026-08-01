@@ -20,12 +20,14 @@ export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
       ? events
       : [
           {
+            id: "intake",
             stage: "intake",
             status: isRunning ? "running" : "pending",
             title: isRunning ? "Audit starting" : "Waiting for input",
             detail: isRunning
               ? "The audit request is being routed through the provider layer."
               : "Choose a sample or paste code, then run the audit.",
+            timestamp: new Date(0).toISOString(),
           } satisfies AgentEvent,
         ];
 
@@ -50,7 +52,7 @@ export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
                   : "text-zinc-500";
 
           return (
-            <li key={`${event.stage}-${index}`} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <li key={`${event.id}-${index}`} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <div className="flex gap-3">
                 <Icon
                   className={`mt-0.5 h-4 w-4 shrink-0 ${color} ${event.status === "running" ? "animate-spin" : ""}`}
@@ -62,6 +64,11 @@ export function TraceTimeline({ events, isRunning }: TraceTimelineProps) {
                     <span className="rounded-md bg-white px-2 py-1 font-mono text-[11px] text-zinc-600 ring-1 ring-zinc-200">
                       {event.stage}
                     </span>
+                    {event.durationMs !== undefined ? (
+                      <span className="font-mono text-[11px] text-zinc-500">
+                        {event.durationMs} ms
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm leading-6 text-zinc-700">{event.detail}</p>
                   {event.artifact ? (

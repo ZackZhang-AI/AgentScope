@@ -22,6 +22,10 @@ export function generateReportMarkdown({
   riskScore,
   findings,
   evalCard,
+  provider,
+  model,
+  metrics,
+  rules,
 }: AuditReportInput) {
   const findingSection =
     findings.length > 0
@@ -36,6 +40,17 @@ export function generateReportMarkdown({
     "",
     `Risk Score: ${riskScore}`,
     "",
+    "## Run Metadata",
+    `- Provider: ${provider}`,
+    `- Model: ${model ?? provider}`,
+    `- Rules: ${rules.join(", ")}`,
+    `- Duration: ${metrics.durationMs} ms`,
+    `- Provider latency: ${metrics.providerLatencyMs} ms`,
+    `- Prompt version: ${metrics.promptVersion}`,
+    metrics.tokenUsage?.totalTokens !== undefined
+      ? `- Token usage: ${metrics.tokenUsage.totalTokens}`
+      : undefined,
+    "",
     "## Findings",
     findingSection,
     "",
@@ -47,5 +62,34 @@ export function generateReportMarkdown({
     `- Score: ${evalCard.score}`,
     "",
     "> Eval card scores describe the audit process quality, not absolute code quality.",
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
+}
+
+export function generateReviewCommentMarkdown(
+  input: Pick<AuditReportInput, "summary" | "riskScore" | "findings">,
+) {
+  const findings = input.findings
+    .map((finding, index) => {
+      const location = finding.file
+        ? ` (${finding.file}${finding.line ? `:${finding.line}` : ""})`
+        : "";
+      return `${index + 1}. **[${finding.severity.toUpperCase()}] ${
+        finding.title
+      }**${location}\n   - Evidence: ${finding.evidence}\n   - Recommendation: ${
+        finding.recommendation
+      }`;
+    })
+    .join("\n\n");
+
+  return [
+    "## HarnessLab Review",
+    "",
+    `**Risk score:** ${input.riskScore}/100`,
+    "",
+    input.summary,
+    "",
+    findings || "No blocking findings were detected in this audit pass.",
   ].join("\n");
 }

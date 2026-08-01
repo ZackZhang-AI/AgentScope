@@ -1,5 +1,34 @@
-# Security Policy
+# 安全策略
 
-Please report security issues privately by opening a private advisory or contacting the repository owner directly. Do not disclose suspected vulnerabilities in public issues until they have been reviewed.
+## 支持范围
 
-Supported versions are the latest code on the default branch unless a release notes otherwise.
+当前仅维护默认分支的最新版本。HarnessLab 是审计辅助工具，输出不能替代人工
+安全审查，也不会自动执行修复或合并代码。
+
+## 报告漏洞
+
+请通过 GitHub Private Vulnerability Reporting 提交安全问题，不要在公开 Issue
+中披露尚未修复的漏洞、密钥或可利用细节。
+
+报告中请包含：
+
+- 受影响的接口或组件
+- 可复现步骤
+- 潜在影响
+- 建议修复方式（如有）
+
+## 项目安全边界
+
+- Provider 密钥仅保存在服务端环境变量
+- 用户输入和模型输出均有长度及结构校验
+- GitHub PR 导入仅访问固定 GitHub API 域名
+- CI 持续运行类型检查、Lint、测试、确定性评测和生产构建
+- 生产依赖使用 `npm audit --omit=dev` 检查
+
+## 已知开发依赖公告
+
+截至 2026-07-28，完整 `npm audit` 会报告 ESLint 9 经由 `minimatch` 引入的
+`brace-expansion` DoS 公告。该依赖仅用于本地和 CI 的静态检查，不进入生产
+运行时；`npm audit --omit=dev` 为 0。直接升级 ESLint 10 会与当前 Next.js
+React/Import 插件不兼容，因此项目暂时保留可用的 ESLint 9，并通过 Dependabot
+跟踪上游兼容更新。

@@ -1,0 +1,285 @@
+{
+  "name": "forked-successful-code-audit",
+  "description": "A child run forked from the failed tool span with a corrected path and a successful final report.",
+  "events": [
+    {
+      "eventId": "evt_fork_001",
+      "runId": "run_fork_001",
+      "sequence": 1,
+      "occurredAt": "2026-07-28T03:05:00.000Z",
+      "receivedAt": "2026-07-28T03:05:00.001Z",
+      "schemaVersion": 1,
+      "type": "run.created",
+      "payload": {
+        "run": {
+          "id": "run_fork_001",
+          "projectId": "project_harnesslab",
+          "name": "Corrected search path",
+          "status": "queued",
+          "taskType": "code_audit",
+          "taskInputHash": "2222222222222222",
+          "configSnapshot": {
+            "provider": "mock",
+            "model": "mock-auditor-v1",
+            "promptVersion": "audit-v2",
+            "modelParameters": { "temperature": 0 },
+            "toolVersions": { "search_repository": "1.0.0" }
+          },
+          "environmentFingerprint": {
+            "harnessVersion": "0.3.0",
+            "runtime": "node-22",
+            "sourceRevision": "fixture-fork",
+            "fingerprint": "env-fork-0001"
+          },
+          "parentRunId": "run_failure_001",
+          "forkedFromSpanId": "span_failure_tool_1",
+          "createdAt": "2026-07-28T03:05:00.000Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_002",
+      "runId": "run_fork_001",
+      "sequence": 2,
+      "occurredAt": "2026-07-28T03:05:00.002Z",
+      "receivedAt": "2026-07-28T03:05:00.003Z",
+      "schemaVersion": 1,
+      "type": "run.started",
+      "payload": { "startedAt": "2026-07-28T03:05:00.002Z" }
+    },
+    {
+      "eventId": "evt_fork_003",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_root",
+      "sequence": 3,
+      "occurredAt": "2026-07-28T03:05:00.010Z",
+      "receivedAt": "2026-07-28T03:05:00.011Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_fork_root",
+          "runId": "run_fork_001",
+          "kind": "agent",
+          "name": "code-audit-agent",
+          "status": "running",
+          "sequence": 3,
+          "startedAt": "2026-07-28T03:05:00.010Z",
+          "attributes": {
+            "replay.mode": "fixture",
+            "replay.parent_run_id": "run_failure_001"
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_004",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_tool",
+      "sequence": 4,
+      "occurredAt": "2026-07-28T03:05:00.020Z",
+      "receivedAt": "2026-07-28T03:05:00.021Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_fork_tool",
+          "runId": "run_fork_001",
+          "parentSpanId": "span_fork_root",
+          "kind": "tool",
+          "name": "search_repository",
+          "status": "running",
+          "sequence": 4,
+          "startedAt": "2026-07-28T03:05:00.020Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "query": "auth middleware", "path": "src" },
+            "redacted": false
+          },
+          "attributes": {
+            "tool.name": "search_repository",
+            "tool.version": "1.0.0",
+            "tool.side_effect": "read_only"
+          },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_005",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_tool",
+      "sequence": 5,
+      "occurredAt": "2026-07-28T03:05:00.021Z",
+      "receivedAt": "2026-07-28T03:05:00.022Z",
+      "schemaVersion": 1,
+      "type": "checkpoint.created",
+      "payload": {
+        "checkpoint": {
+          "id": "checkpoint_fork_tool",
+          "runId": "run_fork_001",
+          "spanId": "span_fork_tool",
+          "stateRef": "fixture://state/fork/tool",
+          "configSnapshot": {
+            "provider": "mock",
+            "promptVersion": "audit-v2",
+            "changedInput": { "path": "src" }
+          },
+          "toolPolicySnapshot": { "search_repository": "read_only" },
+          "completeness": "complete",
+          "blockedReasons": [],
+          "createdAt": "2026-07-28T03:05:00.021Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_006",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_tool",
+      "sequence": 6,
+      "occurredAt": "2026-07-28T03:05:00.050Z",
+      "receivedAt": "2026-07-28T03:05:00.051Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T03:05:00.050Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": { "matches": [{ "file": "src/auth.ts", "line": 18 }] },
+          "redacted": false
+        },
+        "metrics": { "durationMs": 30 },
+        "replayability": {
+          "level": "high",
+          "reason": "The tool is read-only and has a complete checkpoint.",
+          "checkpointId": "checkpoint_fork_tool"
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_007",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_final",
+      "sequence": 7,
+      "occurredAt": "2026-07-28T03:05:00.060Z",
+      "receivedAt": "2026-07-28T03:05:00.061Z",
+      "schemaVersion": 1,
+      "type": "span.started",
+      "payload": {
+        "span": {
+          "id": "span_fork_final",
+          "runId": "run_fork_001",
+          "parentSpanId": "span_fork_root",
+          "kind": "model",
+          "name": "final-answer",
+          "status": "running",
+          "sequence": 7,
+          "startedAt": "2026-07-28T03:05:00.060Z",
+          "inputRef": {
+            "kind": "inline",
+            "data": { "toolResultRef": "span_fork_tool" },
+            "redacted": false
+          },
+          "attributes": { "gen_ai.provider.name": "mock" },
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_008",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_final",
+      "sequence": 8,
+      "occurredAt": "2026-07-28T03:05:00.120Z",
+      "receivedAt": "2026-07-28T03:05:00.121Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T03:05:00.120Z",
+        "outputRef": {
+          "kind": "inline",
+          "data": {
+            "summary": "Audit completed after correcting the search path.",
+            "findings": [
+              {
+                "severity": "medium",
+                "file": "src/auth.ts",
+                "line": 18,
+                "title": "Missing authorization guard"
+              }
+            ]
+          },
+          "redacted": false
+        },
+        "metrics": {
+          "durationMs": 60,
+          "tokenUsage": { "inputTokens": 95, "outputTokens": 45, "totalTokens": 140 }
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_009",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_final",
+      "sequence": 9,
+      "occurredAt": "2026-07-28T03:05:00.125Z",
+      "receivedAt": "2026-07-28T03:05:00.126Z",
+      "schemaVersion": 1,
+      "type": "artifact.created",
+      "payload": {
+        "artifact": {
+          "id": "artifact_fork_report",
+          "runId": "run_fork_001",
+          "spanId": "span_fork_final",
+          "kind": "report",
+          "mediaType": "text/markdown",
+          "storageKey": "fixture://artifacts/fork-report.md",
+          "contentHash": "cccccccccccccccc",
+          "sizeBytes": 384,
+          "redactionState": "redacted",
+          "createdAt": "2026-07-28T03:05:00.125Z",
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "eventId": "evt_fork_010",
+      "runId": "run_fork_001",
+      "spanId": "span_fork_root",
+      "sequence": 10,
+      "occurredAt": "2026-07-28T03:05:00.130Z",
+      "receivedAt": "2026-07-28T03:05:00.131Z",
+      "schemaVersion": 1,
+      "type": "span.ended",
+      "payload": {
+        "status": "success",
+        "endedAt": "2026-07-28T03:05:00.130Z",
+        "outputRef": {
+          "kind": "artifact",
+          "artifactId": "artifact_fork_report",
+          "summary": "Forked audit report",
+          "redacted": false
+        },
+        "metrics": { "durationMs": 120 }
+      }
+    },
+    {
+      "eventId": "evt_fork_011",
+      "runId": "run_fork_001",
+      "sequence": 11,
+      "occurredAt": "2026-07-28T03:05:00.140Z",
+      "receivedAt": "2026-07-28T03:05:00.141Z",
+      "schemaVersion": 1,
+      "type": "run.ended",
+      "payload": {
+        "status": "success",
+        "completedAt": "2026-07-28T03:05:00.140Z"
+      }
+    }
+  ]
+}

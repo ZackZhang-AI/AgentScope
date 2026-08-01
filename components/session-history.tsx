@@ -38,7 +38,8 @@ export function SessionHistory({ sessions, onRestore, onClear }: SessionHistoryP
             >
               <span className="block truncate text-sm font-medium text-zinc-950">{session.findings[0]?.title ?? session.summary}</span>
               <span className="mt-1 block font-mono text-xs text-zinc-500">
-                {session.provider} · risk {session.riskScore}
+                {session.provider} · risk {session.riskScore} ·{" "}
+                {session.inputMeta.estimatedLines} lines
               </span>
             </button>
           ))

@@ -14,6 +14,24 @@ jobs:
   test-build:
     name: Test and build
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://agentscope:agentscope@localhost:5432/agentscope
+      TEST_DATABASE_URL: postgresql://agentscope:agentscope@localhost:5432/agentscope
+      E2E_SANDBOX: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: agentscope
+          POSTGRES_USER: agentscope
+          POSTGRES_PASSWORD: agentscope
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentscope -d agentscope"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
 
     steps:
       - name: Checkout
@@ -29,10 +47,49 @@ jobs:
         run: npm ci
 
       - name: Typecheck
-        run: npm run typecheck --if-present
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Test
-        run: npm test --if-present
+        run: npm test
+
+      - name: Deterministic eval
+        run: npm run eval
+
+      - name: Migrate PostgreSQL
+        run: npm run db:migrate
+
+      - name: PostgreSQL integration
+        run: npm run test:postgres
+
+      - name: Docker sandbox
+        run: npm test -- tests/agentscope-workspace-sandbox.test.ts
+        env:
+          TEST_DOCKER_SANDBOX: "1"
 
       - name: Build
-        run: npm run build --if-present
+        run: npm run build
+
+      - name: Recorded-only deployment smoke
+        env:
+          AGENTSCOPE_EXECUTION_PROFILE: recorded_only
+          BASE_URL: http://127.0.0.1:3101
+        run: |
+          npm run start -- -p 3101 > /tmp/agentscope-recorded.log 2>&1 &
+          npm run smoke:recorded
+
+      - name: Install browser
+        run: npx playwright install --with-deps chrome
+
+      - name: Browser E2E
+        run: npm run e2e
+
+      - name: Lighthouse budgets
+        env:
+          AGENTSCOPE_EXECUTION_PROFILE: recorded_only
+        run: npm run lighthouse
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev

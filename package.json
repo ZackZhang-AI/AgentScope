@@ -1,38 +1,55 @@
 {
   "name": "harnesslab",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint",
     "test": "vitest run",
+    "test:postgres": "vitest run tests/agentscope-postgres.test.ts",
+    "eval": "vitest run tests/eval-suite.test.ts --reporter=verbose",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "smoke:recorded": "node scripts/recorded-only-smoke.mjs",
+    "lighthouse": "node scripts/run-lighthouse.mjs",
+    "record:demo": "node scripts/record-demo.mjs",
+    "screenshot": "node scripts/capture-screenshot.mjs",
+    "db:migrate": "node scripts/migrate-postgres.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.25.0",
-    "next": "16.2.10",
+    "next": "^16.2.12",
+    "pg": "^8.22.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-markdown": "^10.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "^16.2.12",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "js-yaml": "4.3.0",
+    "postcss": "8.5.23",
+    "sharp": "0.35.3"
   }
 }

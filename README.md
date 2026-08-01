@@ -1,191 +1,134 @@
-# HarnessLab：代码 Agent 审计工作台
+# AgentScope | AI Agent 黑匣子回放器
 
-[English README](./README.en.md)
+[![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.3.1-2563eb.svg)](./CHANGELOG.md)
+[![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-HarnessLab 是一个面向代码审查场景的 AI Agent Harness 工作台。它可以把用户粘贴的 diff 或代码片段，转化为可观察的审计轨迹、结构化风险发现、风险评分、评估卡片和可导出的审查报告。
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
 
-一句话来说：HarnessLab 不是普通 AI Chat UI，也不是简单的 DeepSeek 套壳，而是一个面向代码审查任务的 Agent Harness 产品壳。
+[English](./README.en.md) · [求职展示材料](./docs/job-search-kit.zh-CN.md) · [架构说明](./docs/architecture.zh-CN.md) · [更新日志](./CHANGELOG.md)
 
-## 产品预览
+AgentScope 是一个 AI Agent 黑匣子回放器：追踪计划、模型决策、工具调用、延迟、Token、错误和 Artifact，定位无进展循环，从不可变 Checkpoint 创建 Child Run，并用 Span 证据验证修复。
 
-![HarnessLab 审计结果工作台](docs/images/readme-audit-result.png)
+[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm)
 
-左侧控制输入和 Provider，中间展示完整 Harness Trace 与报告，右侧集中呈现风险结论、Findings 和 Eval Card。
+## 90 秒旗舰演示
 
-## 项目定位
+```text
+Failure → Root cause → Fork → Verified fix
+```
 
-AI 应用正在从“直接调用模型”进入“Harness Engineering”阶段。单次模型回答并不够，真正有工程价值的是：
+固定案例中的代码修复 Agent 会执行 `read_file`、`search_code`、`apply_patch` 和 `run_tests`。Parent 因错误策略连续运行相同测试，Workspace/Test Hash 保持不变；用户从安全 Checkpoint 创建 Child，新策略通过测试，Compare 与 Eval 再以证据 Span 验证结果。
 
-- 任务输入是否被正确解析
-- Agent 是否有明确计划
-- 检查过程是否可追踪
-- 风险发现是否结构化
-- 输出质量是否可以评估
-- 审查结果是否方便导出和复用
+![AgentScope trace explorer](./public/harnesslab-desktop.png)
 
-HarnessLab 用代码审查这个具体场景，把这些能力做成一个可演示、可开源、可写进简历的产品界面。
+## v0.3.1 求职展示版
 
-## 核心功能
+- 公开环境使用 `recorded_only`，不探测 Docker、不展示 Live Provider，沙箱请求稳定返回 `SANDBOX_DISABLED`。
+- 四步引导直接聚焦首次失败、`no-progress-loop` 证据和 Replay 安全信息，成功后显示 Parent/Child 事实差异。
+- `/case-study` 解释 Hash 诊断、不可变 Fork、Docker 边界和确定性 Eval。
+- recorded-only Smoke、axe、Lighthouse、桌面与移动 E2E 进入 CI。
+- Lighthouse 预算：Performance ≥ 90、Accessibility ≥ 95、LCP ≤ 2.5 秒、无 Console Error。
+- 提供自动录屏脚本、双语介绍、简历 Bullet、3 分钟与 10 分钟讲稿及面试 FAQ。
 
-- 支持粘贴 unified diff 或 file snippet
-- 支持输入类型切换：`diff` / `files`
-- 支持 provider 切换：`mock` / `deepseek`
-- 支持审查强度切换：`quick` / `standard`
-- 展示完整 Harness Trace Timeline
-- 输出结构化 findings
-- 展示风险评分 Risk Score
-- 展示 Eval Card：`reproducibility`、`traceability`、`testability`、`confidence`、`score`
-- 支持导出 Markdown 审查报告
-- 支持导出 JSON trace
-- 最近审计 sessions 存入浏览器 localStorage
-- 无 API Key 时，Mock Demo 也能完整演示
-- 可部署到 Vercel
+## 三种执行模式
 
-## 产品流程
+| 模式 | 是否执行真实工具 | 依赖 | 使用位置 |
+| --- | --- | --- | --- |
+| Recorded replay | 否，读取确定性运行包 | 无 | Vercel Production、CI、面试演示 |
+| Deterministic sandbox | 是，执行固定 `read/search/patch/test` | PostgreSQL、Docker | 可信本地环境 |
+| Live-model sandbox | 是，模型选择结构化白名单动作 | PostgreSQL、Docker、API Key | 可信本地环境 |
+
+公开部署不配置数据库、Docker 或模型密钥。录制回放不会伪装成真实执行。
+
+## 架构
 
 ```mermaid
 flowchart LR
-    A[粘贴 Diff / 文件片段] --> B[选择 Provider 与审查强度]
-    B --> C[解析并校验输入]
-    C --> D[生成审查计划]
-    D --> E[执行安全、可靠性与测试检查]
-    E --> F[抽取结构化 Findings]
-    F --> G[评估可复现性、可追踪性与置信度]
-    G --> H[生成风险结论与报告]
-    H --> I[导出 Markdown / JSON<br/>保存本地 Session]
+  UI["Trace / Replay / Compare / Eval"] --> API["Versioned API + SSE"]
+  API --> EX["RunExecutor"]
+  EX --> DP["DecisionProvider"]
+  EX --> TR["ToolRegistry"]
+  TR --> WS["WorkspaceSandbox"]
+  WS --> DK["Docker Test Runner"]
+  EX --> EV["Append-only Trace"]
+  EX --> AR["ArtifactStore"]
+  EV --> PG["PostgreSQL"]
+  AR --> PG
+  EV --> AN["Diagnostics / Compare / Eval"]
+  AN --> UI
 ```
 
-## 系统架构
+核心边界：
 
-```mermaid
-flowchart TB
-    UI[Next.js Audit Workbench] --> API[POST /api/audit]
-    API --> Validator[Zod Request Validator]
-    Validator --> Parser[Diff / File Parser]
-    Parser --> Router{Provider Router}
-    Router --> Mock[Deterministic Mock Provider]
-    Router --> DeepSeek[DeepSeek Provider]
-    Mock --> Normalizer[Response Normalizer]
-    DeepSeek --> Normalizer
-    Normalizer --> Report[Report Generator]
-    Report --> Response[Structured Audit Response]
-    Response --> Trace[Trace Timeline]
-    Response --> Findings[Findings + Risk Verdict]
-    Response --> Eval[Eval Card]
-    Response --> Export[Markdown / JSON Export]
-    Response --> Storage[(Browser localStorage)]
-```
+- Provider 只能返回 Zod 校验后的动作，不能生成任意 Shell。
+- Scenario Manifest 固定可修改文件和测试命令。
+- Parent 事件追加写；Child 从 Snapshot Copy-on-Write 恢复。
+- Docker 非 root、禁网，并限制 CPU、内存、PID 和执行时间。
+- Artifact 持久化前脱敏，单个 256KB、单 Run 1MB，内部 Snapshot 默认不导出。
+- Compare 只输出 `Resolved / Regressed / Trade-off`，Eval 使用版本化确定性规则。
 
-## 技术栈
+## 快速开始
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- Zod
-- lucide-react
-- react-markdown
-- Vitest
-- Playwright
-- Vercel
-
-## 本地运行
+只体验录制演示：
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开：
+打开 `http://localhost:3000`，点击 `Start 90-second demo`。不需要 Key、数据库或 Docker。
 
-```text
-http://localhost:3000
-```
-
-默认选择 `Mock Demo` 即可完整体验，无需配置 API Key。
-
-## 使用 DeepSeek
-
-新建 `.env.local`：
+启用本地真实沙箱：
 
 ```bash
-DEEPSEEK_API_KEY=你的_key
-DEEPSEEK_MODEL=deepseek-v4-flash
+docker compose up -d
+copy .env.example .env.local
+npm run db:migrate
+npm run dev
 ```
 
-然后在页面 Provider 中选择 `DeepSeek`。
-
-DeepSeek 调用只发生在服务端 `POST /api/audit`，浏览器不会拿到 API Key。
-
-## 测试命令
+`.env.local`：
 
 ```bash
-npm test
+AGENTSCOPE_EXECUTION_PROFILE=local_sandbox
+DATABASE_URL=postgresql://agentscope:agentscope@localhost:54329/agentscope
+DEEPSEEK_API_KEY=
+MINIMAX_API_KEY=
+```
+
+## 质量门禁
+
+```bash
+npm run typecheck
 npm run lint
+npm test
+npm run eval
 npm run build
-npx playwright test
+npm run smoke:recorded
+npm run e2e
+npm run lighthouse
+npm audit --omit=dev
 ```
 
-当前测试覆盖：
+PostgreSQL 与 Docker 集成测试需要对应服务：
 
-- Zod schema 校验
-- diff / file snippet 解析
-- Mock Provider 启发式审计
-- DeepSeek JSON fallback
-- Markdown 报告生成
-- API Route 成功和错误路径
-- 桌面端和移动端 E2E 流程
-
-## 为什么它不是普通套壳
-
-普通 AI UI 往往只展示“用户输入”和“模型回答”。HarnessLab 展示的是 Agent 执行任务的全过程：
-
-1. Input Intake：解析输入
-2. Planning：生成审查计划
-3. Inspection：执行检查
-4. Finding Extraction：抽取结构化问题
-5. Evaluation：评估审计过程质量
-6. Report Generation：生成可导出报告
-
-这种设计让模型审查过程从黑盒回答变成可观察、可评估、可复现的工程流程。
-
-## 适合的求职叙事
-
-这个项目可以这样写进简历或作品集：
-
-> 基于 Harness Engineering 范式，独立设计并实现 HarnessLab 代码 Agent 审计工作台。项目支持 diff / file snippet 输入、Mock / DeepSeek provider 路由、结构化风险发现、审计 trace 可视化、质量评估卡片和 Markdown / JSON 导出，展示了从模型调用到可观测 Agent 产品化的完整工程链路。
-
-可强调的技术点：
-
-- AI Agent 产品界面设计
-- OpenAI-compatible provider 接入
-- 服务端 API Key 隔离
-- Zod schema 约束模型输出
-- Mock provider 可复现演示
-- Eval Card 和 Trace Timeline 设计
-- Next.js + Vercel 部署
-- Vitest + Playwright 验证
-
-## 部署到 Vercel
-
-1. 将项目推送到 GitHub
-2. 在 Vercel 中导入仓库
-3. 可选配置环境变量：
-   - `DEEPSEEK_API_KEY`
-   - `DEEPSEEK_MODEL`
-4. 部署后，Mock Demo 无需任何环境变量即可使用
-
-## GitHub Topics 建议
-
-```text
-agent
-harness-engineering
-deepseek
-code-review
-ai-workbench
-nextjs
-vercel
+```bash
+$env:TEST_DATABASE_URL="postgresql://agentscope:agentscope@localhost:54329/agentscope"; npm run test:postgres
+$env:TEST_DOCKER_SANDBOX="1"; npm test -- tests/agentscope-workspace-sandbox.test.ts
 ```
+
+## 明确边界
+
+当前是 Next.js + PostgreSQL 模块化单体，只执行仓库内置 `buggy-auth-api`。本版本不包含任意仓库执行、登录、RBAC、多租户、计费、Dataset、LLM-as-a-Judge、独立 Worker 或消息队列。
+
+- [完整 PRD](./docs/agentscope-prd.zh-CN.md)
+- [架构说明](./docs/architecture.zh-CN.md)
+- [实现状态](./docs/agentscope-implementation-status.zh-CN.md)
+- [运行与安全手册](./docs/agentscope-operations.zh-CN.md)
+- [求职展示材料](./docs/job-search-kit.zh-CN.md)
 
 ## License
 
-MIT
+[MIT](./LICENSE)

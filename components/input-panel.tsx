@@ -1,19 +1,46 @@
 "use client";
 
-import { FlaskConical, Play, RotateCcw } from "lucide-react";
-import type { InputType, Intensity, Provider } from "@/lib/types";
+import {
+  FlaskConical,
+  GitPullRequest,
+  Loader2,
+  Play,
+  RotateCcw,
+} from "lucide-react";
+import type {
+  AuditRequest,
+  AuditRule,
+  InputType,
+  Intensity,
+  Provider,
+} from "@/lib/types";
 import { sampleList } from "@/lib/samples";
+
+const auditRules: Array<{ value: AuditRule; label: string }> = [
+  { value: "security", label: "Security" },
+  { value: "reliability", label: "Reliability" },
+  { value: "testing", label: "Testing" },
+  { value: "maintainability", label: "Maintainability" },
+  { value: "performance", label: "Performance" },
+];
 
 type InputPanelProps = {
   content: string;
   inputType: InputType;
   provider: Provider;
   intensity: Intensity;
+  rules: AuditRule[];
+  pullRequestUrl: string;
+  source?: AuditRequest["source"];
   isRunning: boolean;
+  isImporting: boolean;
   onContentChange: (content: string) => void;
   onInputTypeChange: (inputType: InputType) => void;
   onProviderChange: (provider: Provider) => void;
   onIntensityChange: (intensity: Intensity) => void;
+  onRulesChange: (rules: AuditRule[]) => void;
+  onPullRequestUrlChange: (url: string) => void;
+  onImportPullRequest: () => void;
   onRun: () => void;
   onReset: () => void;
 };
@@ -23,11 +50,18 @@ export function InputPanel({
   inputType,
   provider,
   intensity,
+  rules,
+  pullRequestUrl,
+  source,
   isRunning,
+  isImporting,
   onContentChange,
   onInputTypeChange,
   onProviderChange,
   onIntensityChange,
+  onRulesChange,
+  onPullRequestUrlChange,
+  onImportPullRequest,
   onRun,
   onReset,
 }: InputPanelProps) {
@@ -55,6 +89,41 @@ export function InputPanel({
             {type === "diff" ? "Diff" : "File Snippets"}
           </button>
         ))}
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-zinc-800" htmlFor="pr-url">
+          Public GitHub PR
+        </label>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <input
+            id="pr-url"
+            type="url"
+            value={pullRequestUrl}
+            onChange={(event) => onPullRequestUrlChange(event.target.value)}
+            placeholder="https://github.com/owner/repo/pull/123"
+            className="min-w-0 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+          />
+          <button
+            type="button"
+            aria-label="Import pull request"
+            title="Import public pull request"
+            onClick={onImportPullRequest}
+            disabled={isImporting || !pullRequestUrl.trim()}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300"
+          >
+            {isImporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <GitPullRequest className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        {source?.kind === "github-pr" ? (
+          <p className="truncate text-xs text-emerald-700">
+            Imported from {source.url}
+          </p>
+        ) : null}
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-zinc-800">
@@ -102,6 +171,7 @@ export function InputPanel({
           >
             <option value="mock">Mock Demo</option>
             <option value="deepseek">DeepSeek</option>
+            <option value="minimax">MiniMax</option>
           </select>
         </label>
         <label className="grid gap-2 text-sm font-medium text-zinc-800">
@@ -118,9 +188,36 @@ export function InputPanel({
         </label>
       </div>
 
-      {provider === "deepseek" ? (
+      <fieldset className="grid gap-2">
+        <legend className="text-sm font-medium text-zinc-800">Audit rules</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {auditRules.map((rule) => (
+            <label
+              key={rule.value}
+              className="flex min-w-0 items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700"
+            >
+              <input
+                type="checkbox"
+                checked={rules.includes(rule.value)}
+                onChange={(event) => {
+                  const next = event.target.checked
+                    ? [...rules, rule.value]
+                    : rules.filter((value) => value !== rule.value);
+                  if (next.length) onRulesChange(next);
+                }}
+                className="h-4 w-4 accent-emerald-700"
+              />
+              <span className="truncate">{rule.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {provider !== "mock" ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
-          DeepSeek requires DEEPSEEK_API_KEY on the server.
+          {provider === "deepseek"
+            ? "DeepSeek requires DEEPSEEK_API_KEY on the server."
+            : "MiniMax requires MINIMAX_API_KEY on the server."}
         </p>
       ) : null}
 
