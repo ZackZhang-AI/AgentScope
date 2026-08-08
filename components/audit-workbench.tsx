@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader } from "./app-header";
 import { FindingsPanel } from "./findings-panel";
 import { InputPanel } from "./input-panel";
@@ -61,11 +61,13 @@ export function AuditWorkbench() {
   const [isRunning, setIsRunning] = useState(false);
   const [isForking, setIsForking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const mainRef = useRef<HTMLElement>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
-    mainRef.current?.setAttribute("data-hydrated", "true");
-    const timeout = window.setTimeout(() => setSessions(loadSessions()), 0);
+    const timeout = window.setTimeout(() => {
+      setSessions(loadSessions());
+      setHasHydrated(true);
+    }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
 
@@ -393,9 +395,8 @@ export function AuditWorkbench() {
 
   return (
     <main
-      ref={mainRef}
       className="min-h-[100dvh] bg-zinc-100"
-      data-hydrated="false"
+      data-hydrated={hasHydrated ? "true" : "false"}
     >
       <AppHeader provider={provider} />
       <div className="mx-auto grid max-w-[1800px] gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:p-6">

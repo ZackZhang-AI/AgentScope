@@ -72,11 +72,20 @@ test("provider switching and session restore remain usable", async ({ page }) =>
   await expect(
     page.getByRole("heading", { name: "Missing authorization boundary", exact: true }),
   ).toBeVisible({ timeout: 20_000 });
+  await expect.poll(async () => page.evaluate(() => (
+    window.localStorage.getItem("harnesslab.sessions.v2") ?? ""
+  ))).toContain("Missing authorization boundary");
+  const savedRunId = await page.evaluate(() => {
+    const raw = window.localStorage.getItem("harnesslab.sessions.v2") ?? "[]";
+    const sessions = JSON.parse(raw) as Array<{ id?: string }>;
+    return sessions[0]?.id ?? "";
+  });
+  expect(savedRunId).not.toBe("");
 
   await page.reload();
-  await expect(page.getByRole("button", { name: /Missing authorization boundary/ })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.locator("main[data-hydrated='true']")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Clear sessions" })).toBeEnabled();
+  await expect(page.getByText(savedRunId, { exact: false }).first()).toBeVisible();
 });
 
 test("mobile layout keeps primary controls visible", async ({ page }) => {
