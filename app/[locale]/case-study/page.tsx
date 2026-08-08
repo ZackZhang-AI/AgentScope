@@ -69,7 +69,7 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ loca
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <a
-                  href="https://github.com/ZackZhang-AI/HarnessLab"
+                  href="https://github.com/ZackZhang-AI/AgentScope"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex min-h-11 items-center rounded-md border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50"

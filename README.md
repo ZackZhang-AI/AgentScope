@@ -1,11 +1,11 @@
 # AgentScope | AI Agent 黑匣子回放器
 
-[![CI](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/HarnessLab/actions/workflows/ci.yml)
+[![CI](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-0.3.2-2563eb.svg)](./CHANGELOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [中文演示](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study) · [中文案例](https://agentscope-harnesslab.vercel.app/zh/case-study)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [中文演示](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study) · [中文案例](https://agentscope-harnesslab.vercel.app/zh/case-study)
 
 [English](./README.en.md) · [求职展示材料](./docs/job-search-kit.zh-CN.md) · [架构说明](./docs/architecture.zh-CN.md) · [更新日志](./CHANGELOG.md)
 
@@ -13,7 +13,7 @@ AgentScope 是一个 AI Agent 黑匣子回放器：追踪计划、模型决策�
 
 界面默认使用英文，Header 可切换 `EN / 中文`。英文继续使用原有无前缀 URL，中文使用 `/zh`；切换时会保留 Demo、Run ID、查询参数与 Hash。`/api/**`、Trace、Artifact 和 Bundle 数据不会被翻译或改写。
 
-[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/HarnessLab/releases/download/v0.3.1/agentscope-90-second-demo.webm)
+[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.1/agentscope-90-second-demo.webm)
 
 ## 90 秒旗舰演示
 
