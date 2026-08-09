@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
         { source: "/case-study", destination: "/en/case-study" },
         { source: "/demos/:path*", destination: "/en/demos/:path*" },
         { source: "/runs/:path*", destination: "/en/runs/:path*" },
+        { source: "/workbench", destination: "/en/workbench" },
       ],
       afterFiles: [],
       fallback: [],
