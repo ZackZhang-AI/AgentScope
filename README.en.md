@@ -1,46 +1,94 @@
-# AgentScope | AI Agent Black Box Replay
+# AgentScope | Agent Failure Replay and Fix Verification
 
 [![CI](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.2-2563eb.svg)](./CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.3.3-2563eb.svg)](./CHANGELOG.md)
 
-[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Chinese Demo](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [Video](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.1/agentscope-90-second-demo.webm) · [Case Study](https://agentscope-harnesslab.vercel.app/case-study)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Product Case](https://agentscope-harnesslab.vercel.app/case-study) · [中文 README](./README.md) · [Architecture](./docs/architecture.zh-CN.md)
 
-[中文](./README.md) · [Architecture](./docs/architecture.zh-CN.md) · [Changelog](./CHANGELOG.md)
+AgentScope is an AI agent black-box product prototype. It helps agent teams explain why a run failed, create a safe new attempt and verify the result with execution evidence.
 
-AgentScope is an AI Agent black-box replay tool that traces tool calls, detects no-progress loops, forks immutable checkpoints, and verifies fixes with span-linked evidence.
+[![AgentScope guided demo](./public/harnesslab-desktop.png)](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop)
 
-English keeps the original unprefixed URLs. Chinese uses `/zh`; the compact Header switch preserves Demo and Run paths, query parameters, and hashes. API, Trace, Artifact, and Bundle data remain unchanged.
+## The user problem
 
-[![AgentScope social cover](./public/agentscope-social-card.png)](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.1/agentscope-90-second-demo.webm)
+A failed agent often leaves teams with a wrong final answer or a large event log. The useful product questions are smaller:
 
-## The 90-second story
+- Where did the agent stop making progress?
+- Which failure is actionable?
+- How can a team retry without overwriting the original run?
+- Did the new strategy fix the task without adding a regression?
 
-```text
-Failure → Root cause → Fork → Verified fix
+The primary users are agent product owners, developers and quality owners shipping agent-powered products.
+
+## The 90-second journey
+
+The public walkthrough uses a deterministic code-repair case and needs no API key, database or Docker.
+
+| User decision | Question | Product output |
+| --- | --- | --- |
+| See the failure | What did the agent try and where did it stop? | A short action path and first failure |
+| Explain the cause | Why did repeated work not help? | A no-progress explanation and raw evidence |
+| Create a new attempt | How can recovery preserve history? | A safety check and separate child attempt |
+| Verify the result | Did it work and what did it cost? | Tests, regressions, tokens and latency |
+
+The complete Trace stays hidden until the reviewer explicitly opens technical evidence.
+
+## Product shape
+
+AgentScope has two layers:
+
+1. **Product story:** the homepage, guided demo and case study explain the problem, decision, outcome and trade-off in plain language.
+2. **Technical evidence:** the advanced workbench and run detail retain raw spans, tool calls, artifacts, checkpoints, comparison and evaluation.
+
+Key routes:
+
+- `/`: product portfolio homepage.
+- `/demos/code-fix-loop`: guided English walkthrough.
+- `/zh/demos/code-fix-loop`: guided Chinese walkthrough.
+- `/case-study`: product case study.
+- `/workbench`: local sandbox and advanced technical entry.
+- `/runs/:runId`: refreshable run detail.
+
+## Product decisions
+
+| Decision | Why | Trade-off |
+| --- | --- | --- |
+| Evidence before conclusions | Every finding should be traceable | More trace structure, but no opaque overall score |
+| Recovery preserves history | The failed run remains a trustworthy baseline | More storage and comparison logic |
+| One safe scenario first | Arbitrary repositories expand isolation risk | Less breadth, but reproducible safety claims |
+
+## My contribution
+
+I led the problem framing, target-user definition, product flow, interaction design, system architecture, full-stack implementation, test strategy and release acceptance.
+
+AI assisted coding and review. Product judgment, scope control and final verification remained human-owned.
+
+## Targets and verified results
+
+Product targets are kept separate from current evidence. The project does not claim live adoption or business growth.
+
+| Type | Statement |
+| --- | --- |
+| North-star metric | Verified-fix completion rate |
+| Product verification | The recorded case completes failure, diagnosis, recovery and verification |
+| Engineering verification | Parent stays immutable, Child passes the target test and conclusions link to evidence |
+| Public access | Recorded-only deployment needs no key, PostgreSQL or Docker |
+| Quality budget | Performance ≥ 90, Accessibility ≥ 95, LCP ≤ 2.5 seconds |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  HOME["Portfolio and guided demo"] --> STORY["Failure - Cause - New attempt - Verification"]
+  STORY --> REC["Deterministic recording"]
+  STORY --> LOCAL["Local safe sandbox"]
+  REC --> TRACE["Unified execution evidence"]
+  LOCAL --> TRACE
+  TRACE --> ADV["Trace / Compare / Eval"]
 ```
 
-A code-repair Agent reads source, searches symbols, applies patches, and runs tests. The parent repeats the same failing test while workspace and result hashes remain unchanged. The user forks a safe checkpoint into a child, applies a corrected strategy, and verifies the result through deterministic Compare and Eval evidence.
-
-## Execution profiles
-
-| Profile | Purpose | Infrastructure |
-| --- | --- | --- |
-| `recorded_only` | Public portfolio and CI | None |
-| `local_sandbox` | Deterministic or live-model execution | PostgreSQL and Docker |
-
-The public profile skips Docker probing, hides live-provider controls, and rejects sandbox Run/Fork requests with `SANDBOX_DISABLED`. Local execution remains constrained to the built-in `buggy-auth-api` scenario.
-
-## Engineering highlights
-
-- Generic `RunExecutor`, validated `DecisionProvider`, `ToolRegistry`, and isolated workspace contracts
-- Server-owned patch allowlist and test command; models cannot generate arbitrary shell commands
-- Non-root, network-disabled Docker runner with CPU, memory, PID, and timeout limits
-- Append-only parent events, checkpoint snapshots, and copy-on-write child forks
-- No-progress diagnosis using normalized calls plus workspace and test-result hashes
-- Diff and log artifacts with redaction, size budgets, content hashes, and visibility rules
-- Evidence-linked `Resolved / Regressed / Trade-off` comparison and deterministic code-fix evaluation
-- Sequence-based SSE recovery, event deduplication, idempotent Run/Fork creation, and permanent Run URLs
-- recorded-only Smoke, axe, Lighthouse, desktop E2E, and mobile E2E gates
+The implementation remains a Next.js + PostgreSQL modular monolith. Models select validated allowlisted actions; the server owns file and test permissions.
 
 ## Quick start
 
@@ -49,18 +97,15 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and select `Start 90-second demo`. No key, database, or Docker daemon is required.
+Open `http://localhost:3000/demos/code-fix-loop`. The recorded walkthrough needs no key, database or Docker.
 
-For trusted local sandbox execution:
+Local sandbox setup is documented in the [operations guide](./docs/agentscope-operations.zh-CN.md).
 
-```bash
-docker compose up -d
-# Copy .env.example to .env.local
-npm run db:migrate
-npm run dev
-```
+## Boundaries and next step
 
-Set `AGENTSCOPE_EXECUTION_PROFILE=local_sandbox` and configure `DATABASE_URL`. DeepSeek and MiniMax keys are optional server-only settings.
+The current project executes only the built-in `buggy-auth-api` scenario. It does not include arbitrary repositories, authentication, RBAC, billing, datasets, independent workers or queues.
+
+The next product step is validating whether target users understand the guided flow before expanding runtime breadth.
 
 ## Verification
 
@@ -76,7 +121,14 @@ npm run lighthouse
 npm audit --omit=dev
 ```
 
-The current release is a modular monolith and a fixed-scenario portfolio sandbox. It does not execute arbitrary repositories or claim multi-tenant production isolation.
+## Documentation
+
+- [Full PRD](./docs/agentscope-prd.zh-CN.md)
+- [Architecture](./docs/architecture.zh-CN.md)
+- [Implementation status](./docs/agentscope-implementation-status.zh-CN.md)
+- [Operations and security](./docs/agentscope-operations.zh-CN.md)
+- [Job-search kit](./docs/job-search-kit.zh-CN.md)
+- [Changelog](./CHANGELOG.md)
 
 ## License
 

@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
     return [english, chinese].map((localized) => ({
       url: new URL(localized, siteUrl).toString(),
-      lastModified: new Date("2026-08-01"),
+      lastModified: new Date("2026-08-09"),
       changeFrequency: "monthly" as const,
       priority: path === "/" ? 1 : 0.8,
       alternates: { languages },
