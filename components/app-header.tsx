@@ -1,52 +1,59 @@
 "use client";
 
-import { BookOpenText, Code2, ShieldCheck } from "lucide-react";
+import { BookOpenText, Code2, Play, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { LocaleSwitcher } from "./locale-switcher";
 import { useI18n } from "./i18n-provider";
 
 type AppHeaderProps = {
-  provider: string;
+  provider?: string;
 };
 
 export function AppHeader({ provider }: AppHeaderProps) {
   const { localizedPath, t } = useI18n();
   return (
-    <header className="flex flex-col gap-4 border-b border-zinc-200 bg-white px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-      <Link href={localizedPath("/")} className="flex items-start gap-3 rounded-md">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
-          <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+    <header className="border-b border-zinc-200 bg-white px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 py-3 lg:flex-nowrap">
+      <Link href={localizedPath("/")} className="flex items-center gap-2.5 rounded-md">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+          <ShieldCheck className="h-4.5 w-4.5" aria-hidden="true" />
         </div>
         <div>
-          <div className="text-xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
+          <div className="text-lg font-semibold tracking-tight text-zinc-950">
             AgentScope
           </div>
-          <p className="max-w-3xl text-sm leading-6 text-zinc-600">
-            {t("header.description")}
-          </p>
+          <p className="hidden text-[11px] text-zinc-500 sm:block">{t("header.tagline")}</p>
         </div>
       </Link>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <nav className="flex flex-wrap items-center justify-end gap-1.5 text-sm" aria-label={t("header.navigation")}>
         <LocaleSwitcher />
         <Link
+          href={localizedPath("/demos/code-fix-loop")}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
+        >
+          <Play className="h-4 w-4" aria-hidden="true" />
+          {t("header.demo")}
+        </Link>
+        <Link
           href={localizedPath("/case-study")}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
         >
           <BookOpenText className="h-4 w-4" aria-hidden="true" />
           {t("header.caseStudy")}
         </Link>
-        <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-700">
+        {provider ? <span className="hidden rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-xs text-zinc-600 xl:inline-flex">
           {t("header.provider")}: <span className="font-medium capitalize text-zinc-950">{provider}</span>
-        </span>
+        </span> : null}
         <a
           href="https://github.com/ZackZhang-AI/AgentScope"
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-2.5 py-2 font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50"
           target="_blank"
           rel="noreferrer"
         >
           <Code2 className="h-4 w-4" aria-hidden="true" />
           {t("header.github")}
         </a>
+      </nav>
       </div>
     </header>
   );

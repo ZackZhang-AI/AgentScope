@@ -11,11 +11,11 @@ async function expectNoSeriousViolations(page: Page, label: string) {
 
 test("homepage and Case Study have no serious accessibility violations", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("main[data-hydrated='true']")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Understand why an agent failed/ })).toBeVisible();
   await expectNoSeriousViolations(page, "homepage");
 
   await page.goto("/case-study");
-  await expect(page.getByRole("heading", { name: /final answer cannot explain/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /clearer way to debug agent failures/ })).toBeVisible();
   await expectNoSeriousViolations(page, "case-study");
 
   await page.goto("/zh");
@@ -23,21 +23,21 @@ test("homepage and Case Study have no serious accessibility violations", async (
   await expectNoSeriousViolations(page, "homepage-zh");
 
   await page.goto("/zh/case-study");
-  await expect(page.getByRole("heading", { name: /只看最终答案/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /更清晰的产品路径/ })).toBeVisible();
   await expectNoSeriousViolations(page, "case-study-zh");
 });
 
 test("Demo, Compare and Eval views have no serious accessibility violations", async ({ page }) => {
   await page.goto("/demos/code-fix-loop");
-  await expect(page.getByRole("heading", { name: /Failure: the parent ends/ })).toBeVisible();
-  await expectNoSeriousViolations(page, "demo-parent");
+  await expect(page.getByRole("heading", { name: /Follow one failed agent/ })).toBeVisible();
+  await expectNoSeriousViolations(page, "demo-intro");
 
-  await page.getByRole("button", { name: "Locate root cause" }).click();
-  await page.getByRole("button", { name: "Inspect safe checkpoint" }).click();
-  await page.getByRole("button", { name: "Fork from this step" }).click();
-  await page.getByRole("button", { name: "Replay fixed fixture" }).click();
+  await page.goto("/demos/code-fix-loop?step=verified&details=brief");
+  await expect(page.getByRole("heading", { name: "Agent product decision brief" })).toBeVisible();
+  await expectNoSeriousViolations(page, "product-brief");
 
-  await expect(page.getByRole("heading", { name: /child removed the failure/ })).toBeVisible();
+  await page.goto("/demos/code-fix-loop?step=verified&details=trace");
+  await expect(page.getByRole("heading", { name: /fixed the failure without adding a regression/ })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
   await expectNoSeriousViolations(page, "compare");
 

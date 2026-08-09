@@ -28,10 +28,12 @@ for (const path of [
   "/",
   "/demos/code-fix-loop",
   "/case-study",
+  "/workbench",
   "/audit",
   "/zh",
   "/zh/demos/code-fix-loop",
   "/zh/case-study",
+  "/zh/workbench",
   "/zh/audit",
 ]) {
   await expectStatus(path, 200);

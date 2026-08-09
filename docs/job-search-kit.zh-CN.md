@@ -1,30 +1,30 @@
 # AgentScope 求职展示材料
 
-面向岗位：AI 全栈工程师、Agent 工程师、AI 应用工程师。
+面向岗位：AI 产品经理、AI 应用产品经理、开发者工具产品经理。
 
 ## 一句话介绍
 
-中文：AgentScope 是一个 AI Agent 黑匣子回放器，能够追踪工具调用、定位无进展循环、从不可变 Checkpoint 创建修复分支，并用 Span 证据验证结果。
+中文：AgentScope 是一个 Agent 失败回看与修复验证产品，帮助团队解释失败原因、安全创建新尝试，并用执行证据验证结果。
 
-English: AgentScope is an AI Agent black-box replay tool that traces tool calls, detects no-progress loops, forks immutable checkpoints, and verifies fixes with span-linked evidence.
+English: AgentScope helps agent teams explain failed runs, create safe new attempts and verify fixes with execution evidence.
 
 ## 简历 Bullet
 
-- 设计并实现 Agent 可观察性工作台，将模型决策、`read/search/patch/test` 工具调用、Artifact、延迟与 Token 统一投影为可回放 Trace，并支持 SSE 断线续传和永久 Run URL。
-- 构建不可变 Parent、Checkpoint Snapshot 与 Child Fork 调试闭环，使用 Workspace/Test Hash 确定性识别无进展循环，并以 Span 证据驱动 Compare 与 Eval。
-- 为固定代码修复场景实现非 root、禁网、资源受限的 Docker 沙箱与 Patch 白名单；公开部署采用 recorded-only 失败关闭，并建立 Unit、PostgreSQL、Docker、E2E、axe 和 Lighthouse 门禁。
+- 从 Agent 失败后“日志太多但下一步不清楚”的问题出发，定义发现失败、解释原因、创建新尝试、验证结果的四步产品流程，并将完整技术控制台降级为按需证据层。
+- 设计不可变原始尝试与独立新尝试机制，使用代码状态和测试结果识别无进展重复，让每条诊断和验证结论都能回到原始操作记录。
+- 主导双语作品集、90 秒引导演示、产品复盘摘要、安全沙箱与确定性验证的产品和全栈实现，并建立 E2E、可访问性、Lighthouse 与 recorded-only 发布门禁。
 
 ## 60 至 90 秒演示脚本
 
 | 时间 | 画面与操作 | 讲解 |
 | --- | --- | --- |
-| 0–8s | 首页，点击 `Start 90-second demo` | “这是 AgentScope，一个面向多工具 Agent 的黑匣子回放器。公开演示不需要 Key、数据库或 Docker。” |
-| 8–20s | Parent Trace 与 Failure | “这个代码修复 Agent 读文件、搜符号、修改代码并运行测试，但最终失败。” |
-| 20–33s | 点击 `Locate root cause` | “系统不只比较工具名和输入，还比较 Workspace 与测试结果 Hash。三次状态不变的测试被判定为 no-progress loop。” |
-| 33–48s | 点击 `Inspect safe checkpoint` | “Replay Preflight 展示 Checkpoint 完整性和安全策略。Parent 保持不可变，重跑会创建 Child。” |
-| 48–60s | Fork 并确认 | “Child 从安全快照恢复，采用新的修复策略，不会覆盖原始失败证据。” |
-| 60–76s | Verified summary、Compare、Eval | “目标测试从失败变为通过，错误从 4 降到 0，重复调用从 2 降到 0。每个 Eval 结论都能回到证据 Span。” |
-| 76–90s | Case Study | “线上只播放录制数据；真实 Docker 沙箱只在可信本地环境开放。Case Study 解释了架构与边界。” |
+| 0-10s | 首页，点击“开始 90 秒演示” | “AgentScope 帮助团队看懂 Agent 为什么失败，并验证什么修复方法真的有效。” |
+| 10-22s | 演示介绍，点击“开始查看失败” | “这是一个权限错误修复任务。完整技术日志暂时隐藏，我们只看当前需要做的决定。” |
+| 22-36s | 查看简化执行路径 | “Agent 读取、搜索、修改并运行测试，但目标测试仍然失败。” |
+| 36-50s | 点击“为什么会一直失败” | “它连续运行三次相同测试，代码状态和结果都没有变化。产品把它解释为无进展重复，原始规则可以按需展开。” |
+| 50-65s | 创建新尝试并确认安全检查 | “新尝试从完整恢复位置开始，原始失败记录不会被覆盖，服务端继续控制文件和命令权限。” |
+| 65-78s | 查看修复验证 | “目标测试通过，错误和重复操作消失，也没有检测到新回归。成本变化被放在权衡中单独说明。” |
+| 78-90s | 生成产品复盘摘要 | “系统把失败、恢复决策、验证结果和边界整理成可复制的 Markdown。产品负责人可以直接分享，技术评审者仍能跳转到完整证据。” |
 
 ## 3 分钟项目介绍
 

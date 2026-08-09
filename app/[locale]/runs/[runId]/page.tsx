@@ -1,4 +1,4 @@
-import { CodeFixWorkbench } from "@/components/agentscope/code-fix-workbench";
+import { AdvancedRunWorkbench } from "@/components/agentscope/advanced-run-workbench";
 
 export default async function RunPage({
   params,
@@ -6,5 +6,5 @@ export default async function RunPage({
   params: Promise<{ runId: string }>;
 }) {
   const { runId } = await params;
-  return <CodeFixWorkbench initialRunId={runId} />;
+  return <AdvancedRunWorkbench initialRunId={runId} />;
 }

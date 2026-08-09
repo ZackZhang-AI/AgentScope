@@ -45,6 +45,25 @@ export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanel
         {diagnostics.map((diagnostic) => {
           const Icon = categoryIcon[diagnostic.category];
           const spanId = diagnostic.evidenceSpanIds[0];
+          const localized = locale === "zh" ? (() => {
+            switch (diagnostic.ruleId) {
+              case "first-unrecovered-error":
+                return [t("diagnostics.firstErrorTitle"), t("diagnostics.firstErrorExplanation")];
+              case "duplicate-tool-call":
+                return [
+                  t("diagnostics.duplicateTitle", { count: diagnostic.evidenceSpanIds.length }),
+                  t("diagnostics.duplicateExplanation"),
+                ];
+              case "no-progress-loop":
+                return [t("diagnostics.noProgressTitle"), t("diagnostics.noProgressExplanation")];
+              case "latency-hotspot":
+                return [t("diagnostics.latencyTitle"), t("diagnostics.latencyExplanation")];
+              case "token-hotspot":
+                return [t("diagnostics.tokenTitle"), t("diagnostics.tokenExplanation")];
+              default:
+                return [t("diagnostics.qualityTitle"), t("diagnostics.qualityExplanation")];
+            }
+          })() : [diagnostic.title, diagnostic.explanation];
 
           return (
             <button
@@ -63,14 +82,10 @@ export function DiagnosticsPanel({ diagnostics, onSelectSpan }: DiagnosticsPanel
               }`} aria-hidden="true" />
               <span className="min-w-0">
                 <span className="block text-xs font-semibold text-zinc-900">
-                  {locale === "zh" && diagnostic.ruleId === "no-progress-loop"
-                    ? t("diagnostics.noProgressTitle")
-                    : diagnostic.title}
+                  {localized[0]}
                 </span>
                 <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-zinc-500">
-                  {locale === "zh" && diagnostic.ruleId === "no-progress-loop"
-                    ? t("diagnostics.noProgressExplanation")
-                    : diagnostic.explanation}
+                  {localized[1]}
                 </span>
                 <span className="mt-1.5 block font-mono text-[10px] text-zinc-600">
                   {t("diagnostics.confidence", { value: Math.round(diagnostic.confidence * 100) })} · {diagnostic.ruleId === "no-progress-loop" ? "no_progress_loop" : diagnostic.ruleId}
