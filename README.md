@@ -2,10 +2,10 @@
 
 [![CI](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.3-2563eb.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.4-2563eb.svg)](./CHANGELOG.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16-111111.svg)](https://nextjs.org/)
 
-[在线演示](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [产品案例](https://agentscope-harnesslab.vercel.app/zh/case-study) · [English README](./README.en.md) · [架构说明](./docs/architecture.zh-CN.md)
+[在线演示](https://agentscope-harnesslab.vercel.app/zh/demos/code-fix-loop) · [中文视频](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.4/agentscope-90-second-demo-zh.webm) · [英文视频](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.4/agentscope-90-second-demo-en.webm) · [产品案例](https://agentscope-harnesslab.vercel.app/zh/case-study) · [English README](./README.en.md)
 
 AgentScope 是一个 AI Agent 黑匣子产品原型。它帮助 Agent 产品团队解释一次运行为什么失败，从安全位置创建新尝试，并用执行证据验证修复是否有效。
 
@@ -33,15 +33,15 @@ Agent 执行失败后，团队通常只能看到错误的最终答案或大量�
 | 看见失败 | Agent 做了什么，任务停在哪里？ | 简化执行路径与首次失败 |
 | 解释原因 | 为什么反复执行仍没有成功？ | 无进展重复与原始证据 |
 | 创建新尝试 | 如何恢复且不覆盖原记录？ | 安全恢复检查与独立 Child |
-| 验证结果 | 修复是否有效，代价是什么？ | 测试、回归、Token 与延迟对比 |
+| 验证结果 | 修复是否有效，代价是什么？ | 测试、回归、成本对比与产品复盘摘要 |
 
-完整 Trace 不会在演示开始时直接铺开。只有用户主动选择“查看完整技术证据”后，才会显示 Span、Inspector、Diagnostics、Compare 和 Eval。
+验证完成后可一键生成中英文产品复盘摘要，复制或下载 Markdown，与产品、研发和质量负责人共享。完整 Trace 不会在演示开始时直接铺开，只有用户主动选择“查看完整技术证据”后才显示技术细节。
 
 ## 产品形态
 
 AgentScope 提供两层体验：
 
-1. **产品叙事层**：首页、90 秒演示和 Case Study 使用自然语言解释问题、决策、结果与取舍。
+1. **产品叙事层**：首页、90 秒演示、产品复盘摘要和 Case Study 使用自然语言解释问题、决策、结果与取舍。
 2. **技术证据层**：高级 Workbench、Run Detail 和 Trace Explorer 保留完整输入输出、工具调用、Artifact、Checkpoint 与评测证据。
 
 主要入口：
@@ -81,6 +81,7 @@ AI 参与编码和审查辅助。产品判断、架构选择、范围控制和�
 | 北极星指标 | 可验证修复完成率：用户从失败证据进入新尝试，并完成结果验证的比例 |
 | 当前产品验证 | 录制案例可完成失败、定位、恢复和验证的完整闭环 |
 | 当前工程验证 | Parent 保持不可变，Child 通过目标测试，结论关联原始操作证据 |
+| 决策交付物 | 双语复盘摘要可复制、下载和跳转到对应技术证据 |
 | 公开访问 | Recorded-only 模式无需 Key、PostgreSQL 或 Docker |
 | 质量预算 | Performance ≥ 90、Accessibility ≥ 95、LCP ≤ 2.5 秒 |
 

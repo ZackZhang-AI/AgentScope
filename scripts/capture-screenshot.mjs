@@ -8,13 +8,9 @@ try {
     viewport: { width: 1440, height: 1100 },
     deviceScaleFactor: 1,
   });
-  await page.goto(`${baseUrl}/demos/code-fix-loop?step=verified`);
+  await page.goto(`${baseUrl}/demos/code-fix-loop?step=verified&details=brief`);
   await page.locator("main[data-hydrated='true']").waitFor();
-  await page
-    .getByRole("heading", {
-      name: /fixed the failure without adding a regression/,
-    })
-    .waitFor();
+  await page.getByRole("heading", { name: "Agent product decision brief" }).waitFor();
   await page.screenshot({
     path: "public/harnesslab-desktop.png",
     fullPage: true,

@@ -1,13 +1,14 @@
 # AgentScope 实现状态
 
 更新时间：2026-08-09
-当前版本：v0.3.3
+当前版本：v0.3.4
 
 ## 已完成：AI 产品经理作品集体验
 
 - 首页以用户问题、四步产品流程、关键决策、验证结果与个人贡献为主叙事
 - 90 秒演示只展示当前决策，未来步骤锁定，完整技术证据按需展开
-- `step` 与 `details=trace` 支持刷新、分享和中英文切换，旧 URL 保持兼容
+- `step`、`details=brief` 与 `details=trace` 支持刷新、分享和中英文切换，旧 URL 保持兼容
+- 验证完成后可生成中英文产品复盘摘要，复制或下载 Markdown，并跳转到对应证据
 - `/workbench` 承载本地沙箱和高级技术入口，`/runs/:runId` 继续提供完整运行详情
 - Case Study 明确区分产品目标、当前验证、实现取舍和技术可信度
 - README 提供三分钟可读的完整项目说明，不再把执行模式和架构放在主叙事前面
@@ -38,6 +39,7 @@
 - 首页、Demo、Compare、Eval、Case Study 的 axe 严重问题门禁
 - Lighthouse Performance ≥ 90、Accessibility ≥ 95、LCP ≤ 2.5 秒和 Console Error 预算
 - 自动录屏脚本、双语介绍、简历 Bullet、3/10 分钟讲稿与面试 FAQ
+- 双语 60 至 90 秒产品演示视频与 GitHub Release 展示入口
 - Open Graph、Twitter、robots、sitemap 和 1200×630 社交分享图
 
 ## 执行模式状态

@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml/badge.svg)](https://github.com/ZackZhang-AI/AgentScope/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-059669.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.3-2563eb.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.4-2563eb.svg)](./CHANGELOG.md)
 
-[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [Product Case](https://agentscope-harnesslab.vercel.app/case-study) · [中文 README](./README.md) · [Architecture](./docs/architecture.zh-CN.md)
+[Live Demo](https://agentscope-harnesslab.vercel.app/demos/code-fix-loop) · [English Video](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.4/agentscope-90-second-demo-en.webm) · [Chinese Video](https://github.com/ZackZhang-AI/AgentScope/releases/download/v0.3.4/agentscope-90-second-demo-zh.webm) · [Product Case](https://agentscope-harnesslab.vercel.app/case-study) · [中文 README](./README.md)
 
 AgentScope is an AI agent black-box product prototype. It helps agent teams explain why a run failed, create a safe new attempt and verify the result with execution evidence.
 
@@ -30,15 +30,15 @@ The public walkthrough uses a deterministic code-repair case and needs no API ke
 | See the failure | What did the agent try and where did it stop? | A short action path and first failure |
 | Explain the cause | Why did repeated work not help? | A no-progress explanation and raw evidence |
 | Create a new attempt | How can recovery preserve history? | A safety check and separate child attempt |
-| Verify the result | Did it work and what did it cost? | Tests, regressions, tokens and latency |
+| Verify the result | Did it work and what did it cost? | Tests, regressions, cost comparison and a product brief |
 
-The complete Trace stays hidden until the reviewer explicitly opens technical evidence.
+The verified result can generate a bilingual Markdown product brief for product, engineering and quality owners. The complete Trace stays hidden until the reviewer explicitly opens technical evidence.
 
 ## Product shape
 
 AgentScope has two layers:
 
-1. **Product story:** the homepage, guided demo and case study explain the problem, decision, outcome and trade-off in plain language.
+1. **Product story:** the homepage, guided demo, product brief and case study explain the problem, decision, outcome and trade-off in plain language.
 2. **Technical evidence:** the advanced workbench and run detail retain raw spans, tool calls, artifacts, checkpoints, comparison and evaluation.
 
 Key routes:
@@ -73,6 +73,7 @@ Product targets are kept separate from current evidence. The project does not cl
 | North-star metric | Verified-fix completion rate |
 | Product verification | The recorded case completes failure, diagnosis, recovery and verification |
 | Engineering verification | Parent stays immutable, Child passes the target test and conclusions link to evidence |
+| Decision output | The bilingual product brief can be copied, downloaded and linked back to technical evidence |
 | Public access | Recorded-only deployment needs no key, PostgreSQL or Docker |
 | Quality budget | Performance ≥ 90, Accessibility ≥ 95, LCP ≤ 2.5 seconds |
 
