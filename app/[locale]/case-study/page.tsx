@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
+  FileText,
   GitBranch,
   LockKeyhole,
   ShieldCheck,
@@ -147,6 +148,28 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ loca
               <div className="bg-zinc-900 p-5"><p className="text-xs text-zinc-400">{t("case.metric.repeats")}</p><p className="mt-2 text-lg font-semibold text-emerald-300">{comparison.parentFacts.duplicateToolCalls} → {comparison.childFacts.duplicateToolCalls}</p><p className="mt-2 text-xs leading-5 text-zinc-400">{t("case.metric.verifiedLabel")}</p></div>
               <div className="bg-zinc-900 p-5"><p className="text-xs text-zinc-400">{t("case.metric.evidence")}</p><p className="mt-2 text-lg font-semibold text-emerald-300">{noProgress?.evidenceSpanIds.length ?? 0}</p><p className="mt-2 text-xs leading-5 text-zinc-400">{t("case.metric.verifiedLabel")}</p></div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-zinc-200 bg-white" aria-labelledby="deliverable-title">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.78fr_1.22fr] lg:py-20">
+            <div>
+              <FileText className="h-7 w-7 text-emerald-700" aria-hidden="true" />
+              <h2 id="deliverable-title" className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">{t("case.deliverableTitle")}</h2>
+              <p className="mt-4 text-base leading-7 text-zinc-600">{t("case.deliverableDescription")}</p>
+              <Link href={localizedPath("/demos/code-fix-loop?step=verified&details=brief", locale)} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 active:translate-y-px">
+                {t("case.deliverableCta")}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+            <dl className="border-t border-zinc-300">
+              {["product", "engineering", "quality"].map((audience) => (
+                <div key={audience} className="grid gap-2 border-b border-zinc-200 py-5 sm:grid-cols-[10rem_1fr]">
+                  <dt className="font-semibold text-zinc-950">{t(`case.deliverable.${audience}` as "case.deliverable.product")}</dt>
+                  <dd className="text-sm leading-6 text-zinc-600">{t(`case.deliverable.${audience}Description` as "case.deliverable.productDescription")}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 

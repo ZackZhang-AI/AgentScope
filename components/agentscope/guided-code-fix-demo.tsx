@@ -1,19 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { useI18n } from "@/components/i18n-provider";
 import { buildDemoEvidenceViewModel } from "./demo-evidence-view-model";
 import { DemoProgress, type DemoStage, type DemoStepId } from "./demo-progress";
-import { demoStageProgress, nextDemoStage, parseDemoStage } from "./demo-state";
+import {
+  demoStageProgress,
+  nextDemoStage,
+  parseDemoDetailMode,
+  parseDemoStage,
+  type DemoDetailMode,
+} from "./demo-state";
 import { GuidedDemoStage } from "./guided-demo-stage";
+import { buildProductDecisionBrief } from "./product-decision-brief";
+import { ProductDecisionBriefPanel } from "./product-decision-brief-panel";
 import { TraceExplorer } from "./trace-explorer";
 import { useCodeFixSession } from "./use-code-fix-session";
 
-export function GuidedCodeFixDemo() {
-  const { t } = useI18n();
+const subscribeToOrigin = () => () => {};
+
+export function GuidedCodeFixDemo({ evidenceBaseUrl }: { evidenceBaseUrl: string }) {
+  const { localizedPath, t } = useI18n();
   const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -25,14 +35,40 @@ export function GuidedCodeFixDemo() {
     initialRecordedChild,
   });
   const [highestStep, setHighestStep] = useState(demoStageProgress(requestedStage));
-  const traceVisible = searchParams.get("details") === "trace";
+  const [evidenceSpanId, setEvidenceSpanId] = useState<string>();
+  const runtimeEvidenceBaseUrl = useSyncExternalStore(
+    subscribeToOrigin,
+    () => window.location.origin,
+    () => evidenceBaseUrl,
+  );
+  const detailMode = parseDemoDetailMode(searchParams);
+  const briefVisible = detailMode === "brief";
+  const traceVisible = detailMode === "trace";
   const view = useMemo(
     () => session.demo ? buildDemoEvidenceViewModel(session.demo) : undefined,
     [session.demo],
   );
+  const brief = useMemo(
+    () => view ? buildProductDecisionBrief({
+      view,
+      t,
+      evidenceBaseUrl: runtimeEvidenceBaseUrl,
+      localizedDemoPath: localizedPath("/demos/code-fix-loop"),
+    }) : undefined,
+    [localizedPath, runtimeEvidenceBaseUrl, t, view],
+  );
 
   useEffect(() => {
     mainRef.current?.setAttribute("data-hydrated", "true");
+  }, []);
+
+  useEffect(() => {
+    function readEvidenceSpan() {
+      setEvidenceSpanId(decodeURIComponent(window.location.hash.slice(1)) || undefined);
+    }
+    readEvidenceSpan();
+    window.addEventListener("hashchange", readEvidenceSpan);
+    return () => window.removeEventListener("hashchange", readEvidenceSpan);
   }, []);
 
   useEffect(() => {
@@ -41,11 +77,14 @@ export function GuidedCodeFixDemo() {
     headingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [stage]);
 
-  function updateUrl(nextStage: DemoStage, details?: "trace") {
+  function updateUrl(
+    nextStage: DemoStage,
+    details: DemoDetailMode = "summary",
+  ) {
     const params = new URLSearchParams(window.location.search);
     params.delete("view");
     params.set("step", nextStage);
-    if (details) params.set("details", details);
+    if (details !== "summary") params.set("details", details);
     else params.delete("details");
     const query = params.toString();
     window.history.pushState(
@@ -80,7 +119,11 @@ export function GuidedCodeFixDemo() {
   }
 
   function toggleTrace() {
-    updateUrl("verified", traceVisible ? undefined : "trace");
+    updateUrl("verified", traceVisible ? "summary" : "trace");
+  }
+
+  function toggleBrief() {
+    updateUrl("verified", briefVisible ? "summary" : "brief");
   }
 
   return (
@@ -116,12 +159,18 @@ export function GuidedCodeFixDemo() {
         stage={stage}
         view={view}
         busy={session.busy}
+        briefVisible={briefVisible}
         traceVisible={traceVisible}
         headingRef={headingRef}
         onAdvance={() => void advance()}
         onRestart={restart}
+        onToggleBrief={toggleBrief}
         onToggleTrace={toggleTrace}
       />
+
+      {stage === "verified" && briefVisible && brief ? (
+        <ProductDecisionBriefPanel brief={brief} onClose={toggleBrief} />
+      ) : null}
 
       {stage === "verified" && traceVisible && session.projection ? (
         <section className="mx-auto max-w-[1800px] px-4 pb-12 sm:px-6" aria-labelledby="advanced-evidence-title">
@@ -130,15 +179,24 @@ export function GuidedCodeFixDemo() {
             <p className="mt-1 text-sm text-zinc-600">{t("guided.advancedDescription")}</p>
           </div>
           <TraceExplorer
-            key={session.projection.run.id}
-            events={session.events}
-            projection={session.projection}
+            key={searchParams.get("runId") ?? session.projection.run.id}
+            events={searchParams.get("runId") === session.demo?.parent.result.id
+              ? session.demo.parent.events
+              : session.events}
+            projection={searchParams.get("runId") === session.demo?.parent.result.id
+              ? session.demo.parent.result.trace
+              : session.projection}
             isRunning={session.busy}
             provider={session.providerLabel}
             isForking={session.busy}
             onForkSpan={session.forkFromSpan}
             parentProjection={session.parentProjection}
             replayMode="fixture"
+            focusRequest={evidenceSpanId ? {
+              spanId: evidenceSpanId,
+              inspectorTab: "overview",
+              nonce: 0,
+            } : undefined}
           />
         </section>
       ) : null}

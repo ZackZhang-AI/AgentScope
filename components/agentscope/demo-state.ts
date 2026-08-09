@@ -12,10 +12,19 @@ type SearchParamsReader = {
   get(name: string): string | null;
 };
 
+export type DemoDetailMode = "summary" | "brief" | "trace";
+
 export function parseDemoStage(searchParams: SearchParamsReader): DemoStage {
   if (searchParams.get("view") === "verified") return "verified";
   const step = searchParams.get("step");
   return demoStages.includes(step as DemoStage) ? step as DemoStage : "intro";
+}
+
+export function parseDemoDetailMode(
+  searchParams: SearchParamsReader,
+): DemoDetailMode {
+  const details = searchParams.get("details");
+  return details === "brief" || details === "trace" ? details : "summary";
 }
 
 export function demoStageProgress(stage: DemoStage) {

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleDot,
+  FileText,
   FileSearch,
   GitBranch,
   LockKeyhole,
@@ -27,10 +28,12 @@ type GuidedDemoStageProps = {
   stage: DemoStage;
   view?: DemoEvidenceViewModel;
   busy: boolean;
+  briefVisible: boolean;
   traceVisible: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onAdvance: () => void;
   onRestart: () => void;
+  onToggleBrief: () => void;
   onToggleTrace: () => void;
 };
 
@@ -49,10 +52,12 @@ export function GuidedDemoStage({
   stage,
   view,
   busy,
+  briefVisible,
   traceVisible,
   headingRef,
   onAdvance,
   onRestart,
+  onToggleBrief,
   onToggleTrace,
 }: GuidedDemoStageProps) {
   const { localizedPath, t } = useI18n();
@@ -331,7 +336,11 @@ export function GuidedDemoStage({
       </details>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <button type="button" onClick={onToggleTrace} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800 active:translate-y-px">
+        <button type="button" onClick={onToggleBrief} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 active:translate-y-px">
+          <FileText className="h-4 w-4" aria-hidden="true" />
+          {briefVisible ? t("guided.verified.hideBrief") : t("guided.verified.showBrief")}
+        </button>
+        <button type="button" onClick={onToggleTrace} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 active:translate-y-px">
           {traceVisible ? t("guided.verified.hideTrace") : t("guided.verified.showTrace")}
         </button>
         <Link href={localizedPath("/case-study")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50">

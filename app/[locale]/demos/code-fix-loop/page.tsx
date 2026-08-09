@@ -4,6 +4,7 @@ import { GuidedCodeFixDemo } from "@/components/agentscope/guided-code-fix-demo"
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { hasLocale } from "@/lib/i18n/config";
 import { localizedAlternates } from "@/lib/i18n/metadata";
+import { siteUrl } from "@/lib/site-url";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default function CodeFixDemoPage() {
   return (
     <Suspense fallback={<main className="min-h-[100dvh] bg-zinc-50" />}>
-      <GuidedCodeFixDemo />
+      <GuidedCodeFixDemo evidenceBaseUrl={siteUrl.toString()} />
     </Suspense>
   );
 }
