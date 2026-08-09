@@ -31,7 +31,9 @@ test("sample audit flow shows trace, findings, and exports", async ({ page }) =>
   await page.getByRole("button", { name: "Next event" }).click();
   await expect(page.getByText(/Event 1\/\d+: run.created/)).toBeVisible();
   await page.getByRole("button", { name: "Play visual replay" }).click();
-  await expect(page.getByText("Diagnostics", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByText("Diagnostics: no deterministic issue detected.", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
   await page.getByRole("treeitem").filter({ hasText: "provider-inspection" }).click();
   await page.getByRole("tab", { name: "Replay" }).click();
   await page.getByRole("button", { name: "Fork from this step" }).click();

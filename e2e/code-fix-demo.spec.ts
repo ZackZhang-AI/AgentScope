@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test.describe.configure({ mode: "serial" });
 
 test("recorded story reveals one decision at a time and keeps technical evidence optional", async ({
   page,
 }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   let sandboxExecutions = 0;
   page.on("request", (request) => {
     if (request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/runs") {
@@ -47,6 +49,25 @@ test("recorded story reveals one decision at a time and keeps technical evidence
   await expect(page.getByText("No new regression was detected")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Harness trace" })).toHaveCount(0);
 
+  await page.getByRole("button", { name: "Generate product brief" }).click();
+  await expect(page).toHaveURL(/details=brief/);
+  await expect(page.getByRole("heading", { name: "Agent product decision brief" })).toBeVisible();
+  await expect(page.getByText("no_progress_loop", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Workspace Hash/i)).toHaveCount(0);
+  await page.getByRole("button", { name: "Copy Markdown" }).click();
+  await expect(page.getByRole("button", { name: "Markdown copied" })).toBeVisible();
+  const copiedMarkdown = await page.evaluate(() => navigator.clipboard.readText());
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download .md" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("agentscope-code-fix-brief-en.md");
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  const normalizeLineEndings = (content: string) => content.replace(/\r\n/g, "\n");
+  expect(normalizeLineEndings(await readFile(downloadPath!, "utf8"))).toBe(
+    normalizeLineEndings(copiedMarkdown),
+  );
+
   await page.getByRole("button", { name: "View technical evidence" }).click();
   await expect(page).toHaveURL(/details=trace/);
   await expect(page.getByRole("heading", { name: "Complete technical evidence" })).toBeVisible();
@@ -74,6 +95,26 @@ test("guided demo restores shareable states and stays within the mobile viewport
   await page.goto("/demos/code-fix-loop?view=verified");
   await expect(page.getByRole("heading", { name: /fixed the failure without adding a regression/ })).toBeVisible();
   await expect(page).toHaveURL(/view=verified/);
+
+  await page.goto("/demos/code-fix-loop?step=verified&details=brief");
+  await expect(page.getByRole("heading", { name: "Agent product decision brief" })).toBeVisible();
+  const briefHasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(briefHasHorizontalOverflow).toBe(false);
+});
+
+test("brief download remains available when Clipboard is unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "clipboard", {
+      configurable: true,
+      get: () => undefined,
+    });
+  });
+  await page.goto("/demos/code-fix-loop?step=verified&details=brief");
+  await page.getByRole("button", { name: "Copy Markdown" }).click();
+  await expect(page.getByText("Copy is unavailable. You can still download the file.")).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download .md" }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe("agentscope-code-fix-brief-en.md");
 });
 
 test("Chinese story uses plain language and preserves share state when switching language", async ({ page }) => {
@@ -91,13 +132,16 @@ test("Chinese story uses plain language and preserves share state when switching
   await page.getByRole("button", { name: "从失败前创建新尝试" }).click();
   await page.getByRole("button", { name: "确认并创建新尝试" }).click();
   await expect(page.getByRole("heading", { name: /没有引入新的回归/ })).toBeVisible();
-  await page.getByRole("button", { name: "查看完整技术证据" }).click();
-  await page.getByRole("button", { name: "Eval 报告v1" }).click();
-  await expect(page.getByText("确定性规则评分")).toBeVisible();
-
-  await page.evaluate(() => { window.location.hash = "span-tool-test-success"; });
+  await page.getByRole("button", { name: "生成产品复盘摘要" }).click();
+  await expect(page.getByRole("heading", { name: "Agent 产品复盘摘要" })).toBeVisible();
+  await page.evaluate(() => { window.location.hash = "codefix_demo_child:tool:4"; });
   await page.getByRole("link", { name: "Switch to English" }).click();
-  await expect(page).toHaveURL(/\/demos\/code-fix-loop\?step=verified&details=trace#span-tool-test-success$/);
+  await expect(page).toHaveURL(/\/demos\/code-fix-loop\?step=verified&details=brief#codefix_demo_child:tool:4$/);
+  await expect(page.getByRole("heading", { name: "Agent product decision brief" })).toBeVisible();
+
+  await page.getByRole("button", { name: "View technical evidence" }).click();
+  await page.getByRole("button", { name: "Eval Report" }).click();
+  await expect(page.getByText("Deterministic rule scores")).toBeVisible();
 });
 
 test("local sandbox remains available in the advanced workbench", async ({ page }) => {

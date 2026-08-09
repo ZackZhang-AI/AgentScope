@@ -32,6 +32,10 @@ test("Demo, Compare and Eval views have no serious accessibility violations", as
   await expect(page.getByRole("heading", { name: /Follow one failed agent/ })).toBeVisible();
   await expectNoSeriousViolations(page, "demo-intro");
 
+  await page.goto("/demos/code-fix-loop?step=verified&details=brief");
+  await expect(page.getByRole("heading", { name: "Agent product decision brief" })).toBeVisible();
+  await expectNoSeriousViolations(page, "product-brief");
+
   await page.goto("/demos/code-fix-loop?step=verified&details=trace");
   await expect(page.getByRole("heading", { name: /fixed the failure without adding a regression/ })).toBeVisible();
   await expect(page.getByText("Parent vs child facts")).toBeVisible();
